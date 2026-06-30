@@ -52,7 +52,7 @@ Clone your repository
 example:
 
 ```bash
-git clone https://github.com/HBRS-AMR-SS26/amr-team-<team_name>.git
+git clone https://github.com/amr-team-<team_name>.git
 ```
 
 ## Finally
