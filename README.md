@@ -1,9 +1,82 @@
-# SLAM using Robile
 
-This repository serves as the **main landing page** for the Robile project.
-It provides a high-level overview and links to individual repositories / branches for each task.
+# AMR FINAL PROJECT
 
-Each task was developed separately to keep the code clean and organized. Use the links below to quickly navigate to each task.
+
+## Important Information
+
+| Item | Details |
+|------|---------|
+| Assignment Release | 1 July 2026 |
+| Due Date | **28 September 2026, 23:59 CET** |
+| Repository Visibility | Public |
+| Team Size | 3–4 students |
+| Submission | Prepare a report with the format explained in class and Submit the GitHub repository URL on LEA |
+
+
+# Getting Started
+
+## Step 1
+
+Click **Use this template** (green button at the top of this page).
+
+## Step 2
+
+Create a new repository using the following naming convention:
+
+```
+amr-team-<team_name>
+```
+
+Replace '<team_name>' with your desired team name.
+
+## Step 3
+
+Set the repository visibility to **Public** and create the repository.
+
+## Step 4
+
+Invite your team members as collaborators to the repository.
+
+```
+Settings
+    ↓
+Collaborators
+    ↓
+Add people
+```
+
+## Step 5
+
+Clone your repository
+
+example:
+
+```bash
+git clone https://github.com/HBRS-AMR-SS26/amr-team-<team_name>.git
+```
+
+## Finally
+
+Work collaboratively by splitting the tasks among team members and individually push your code to the repository.
+
+## Important Note
+
+- Team members work is evaluated based on your commit history, if  we do not see any commits from a team member then we cannot consider their contribution. 
+
+- You can use issue boards and other tools to create issues and pull requests to manage your work and better showcase collaboration.
+
+- Make sure you record almost every session because you need a working video to add into the report. Make sure to take screenshots, screenrecords etc to document your work in an effective manner.
+
+- The robots in the lab are prone to issues so finish everything on simulation as fast as you can and start testing as soon as you can, do not wait until the last moment.
+
+- Make sure to use only one branch to track all of your codes and also do not upload entire folders on to Github, use a gitignore and keep only required files on there.
+
+- Write a nice Readme file on how to use the codes and also explain your approach for the tasks and also any challenges you faced, Feel free to modify this file.
+
+- Ensure when leaving the lab you charge the robots for next team that is coming or if you are the last team unplug the robot, switch it off and then leave.
+
+- Feel free to post any issues you faced on LEA, always refer to the documentation when in confusion and retrace your steps.
+---
 
 # AMR Project
 
