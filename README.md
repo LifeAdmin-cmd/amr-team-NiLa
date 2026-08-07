@@ -1,3 +1,18 @@
+#Setup
+
+1. Install ros2 and dependencies as described in course material
+2. Make scripts Executable
+```
+chmod +x env.bat
+chmod +x launch_sim.bat
+```
+3. start simulation
+```
+./launch_sim.bat
+```
+
+
+
 
 # AMR FINAL PROJECT
 
