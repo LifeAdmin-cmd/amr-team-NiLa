@@ -3,7 +3,8 @@
 robot/robot.py
 
 Robot: the hardware/topic abstraction layer. Wraps /scan, /cmd_vel, and TF
-behind a simple interface (get_lidar, set_velocity, ...) so the controller never has to touch ROS message types directly.
+behind a simple interface (get_lidar, set_velocity, get_goal_in_base_frame,
+stop) so the controller never has to touch ROS message types directly.
 
 Usage
 -----
@@ -20,6 +21,7 @@ Usage
 import math
 from typing import Optional, Tuple
 
+import rclpy.time
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
@@ -92,7 +94,7 @@ class Robot:
         Returns None if the transform isn't available yet."""
         try:
             if not self._tf_buffer.can_transform(
-                self.base_frame, self.odom_frame, self.node.get_clock().now().to_msg()
+                self.base_frame, self.odom_frame, rclpy.time.Time()
             ):
                 return None
 

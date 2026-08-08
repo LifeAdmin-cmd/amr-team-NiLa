@@ -22,13 +22,13 @@ from path_and_motion_planning.potential_field_planner import PotentialFieldPlann
 class Controller(Node):
 
     # ── Goal, in the odom frame ──────────────────────────────────────────
-    GOAL_X = 0.0
-    GOAL_Y = 0.0
-    GOAL_THETA = 10.0  # final heading, optional use
+    GOAL_X = 4.0
+    GOAL_Y = 10.0
+    GOAL_THETA = -1.0  # final heading, optional use
 
     # ── Motion limits ────────────────────────────────────────────────────
-    MAX_LINEAR = 1.5   # m/s cap
-    MAX_ANGULAR = 2.4   # rad/s cap
+    MAX_LINEAR = 0.4    # m/s cap
+    MAX_ANGULAR = 0.8   # rad/s cap
 
     CONTROL_PERIOD = 0.1  # s, 10 Hz control loop
 
@@ -38,7 +38,7 @@ class Controller(Node):
         self.robot = Robot(self)
         self.planner = PotentialFieldPlanner(
             ka=0.4,
-            kr=0.45,
+            kr=0.3,
             rho0=1.5,
             goal_tolerance=0.3,
             min_obstacle_range=0.15,
@@ -58,11 +58,13 @@ class Controller(Node):
 
         lidar_data = self.robot.get_lidar()
         if lidar_data is None:
-            return  # no scan received yet
+            self.get_logger().warn('Waiting for /scan...', throttle_duration_sec=2.0)
+            return
 
         goal_bl = self.robot.get_goal_in_base_frame(self.GOAL_X, self.GOAL_Y)
         if goal_bl is None:
-            return  # TF not ready yet
+            self.get_logger().warn('Waiting for TF (odom -> base_link)...', throttle_duration_sec=2.0)
+            return
 
         self.planner.set_goal(*goal_bl)
 
