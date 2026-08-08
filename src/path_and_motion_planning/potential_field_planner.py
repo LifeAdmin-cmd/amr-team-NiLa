@@ -48,8 +48,6 @@ class PotentialFieldPlanner:
     rho0 : obstacle influence radius [m]; farther obstacles are ignored.
     goal_tolerance : distance [m] to count the goal as reached.
     min_obstacle_range : ignore hits closer than this [m] (sensor noise).
-    attractive_shape : "conic" (constant pull) or "quadratic" (pull scales
-        with distance -- smoother near closely-spaced waypoints).
     """
 
     ka: float = 0.4
@@ -57,7 +55,6 @@ class PotentialFieldPlanner:
     rho0: float = 1.5
     goal_tolerance: float = 0.3
     min_obstacle_range: float = 0.15
-    attractive_shape: str = "conic"  # "conic" | "quadratic"
 
     goal_x: float = field(default=0.0, init=False)
     goal_y: float = field(default=0.0, init=False)
@@ -81,7 +78,7 @@ class PotentialFieldPlanner:
     # Core potential field math
     # ------------------------------------------------------------------ #
     def compute_attractive_force(self, robot_pos: Point) -> Point:
-        """Velocity pulling the robot toward the goal."""
+        """Velocity pulling the robot toward the goal (normalized direction x gain)."""
         rx, ry = robot_pos
         dx = self.goal_x - rx
         dy = self.goal_y - ry
@@ -90,13 +87,8 @@ class PotentialFieldPlanner:
         if dist < 1e-9:
             return 0.0, 0.0
 
-        if self.attractive_shape == "quadratic":
-            fx = self.ka * dx  # scales with distance -> smooth near goal
-            fy = self.ka * dy
-        else:
-            fx = self.ka * (dx / dist)  # constant-magnitude pull
-            fy = self.ka * (dy / dist)
-
+        fx = self.ka * (dx / dist)
+        fy = self.ka * (dy / dist)
         return fx, fy
 
     def compute_repulsive_force(
@@ -182,3 +174,23 @@ class PotentialFieldPlanner:
         dist = math.hypot(self.goal_x - robot_pos[0], self.goal_y - robot_pos[1])
         return dist < self.goal_tolerance
 
+
+# -------------------------------------------------------------------------- #
+# Sanity check: python potential_field_planner.py
+# -------------------------------------------------------------------------- #
+if __name__ == "__main__":
+    pf = PotentialFieldPlanner(ka=0.4, kr=0.3, rho0=1.5, goal_tolerance=0.3)
+    pf.set_goal(5.0, 0.0)
+
+    # 5-ray scan, two close hits roughly ahead
+    lidar_data = LidarScan(
+        ranges=[float("inf"), 2.0, float("inf"), 2.0, float("inf")],
+        angle_min=-math.pi / 4,
+        angle_increment=math.pi / 4,
+    )
+
+    vx, vy, dist_to_goal, goal_reached = pf.potential_field_planner_tick(lidar_data)
+    print("vx:", vx)
+    print("vy:", vy)
+    print("dist_to_goal:", dist_to_goal)
+    print("goal_reached:", goal_reached)
