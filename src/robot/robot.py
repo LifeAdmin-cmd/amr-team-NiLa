@@ -89,6 +89,22 @@ class Robot:
     # ------------------------------------------------------------------ #
     # Frames
     # ------------------------------------------------------------------ #
+    def get_robot_pose_in_odom(self) -> Optional[Tuple[float, float]]:
+        """Current robot (x, y) in the odom frame, or None if TF not ready.
+        Used to capture wherever the robot happens to be as a local origin."""
+        try:
+            if not self._tf_buffer.can_transform(
+                self.odom_frame, self.base_frame, rclpy.time.Time()
+            ):
+                return None
+            t = self._tf_buffer.lookup_transform(
+                self.odom_frame, self.base_frame, rclpy.time.Time()
+            )
+            return t.transform.translation.x, t.transform.translation.y
+        except Exception as e:
+            self.node.get_logger().warn(f"TF error: {e}")
+            return None
+
     def get_goal_in_base_frame(self, x: float, y: float) -> Optional[Tuple[float, float]]:
         """Transform a goal point from the odom frame into base_link.
         Returns None if the transform isn't available yet."""
@@ -96,6 +112,11 @@ class Robot:
             if not self._tf_buffer.can_transform(
                 self.base_frame, self.odom_frame, rclpy.time.Time()
             ):
+                self.node.get_logger().warn(
+                    "TF not ready. Frames this node's buffer knows about:\n"
+                    + self._tf_buffer.all_frames_as_string(),
+                    throttle_duration_sec=5.0,
+                )
                 return None
 
             point = PointStamped()

@@ -11,3 +11,11 @@ Global planner on top, for large maps where a single potential field goal gets s
 These waypoints feed one at a time into the potential field planner.
 
 ![Flood fill demo](img/flood_fill_demo.png)
+
+
+### First path and motion planning validation
+
+Quick end-to-end validation before continuing: the planned path/waypoints (left) next to the actual robot driving them in Gazebo (right). Note the robot's position at controller start is treated as (0,0) with heading 0, so there's a slight offset/flip relative to the planning image, but it drives the waypoints correctly regardless - some fine-tuning likely still needed.
+
+![Square path test](img/square_path_test.png)
+![Square path validation](img/square_path_validation.gif)
