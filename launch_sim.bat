@@ -16,6 +16,6 @@ sleep 10
 # Start controller in second tab
 gnome-terminal --tab --title="Controller" -- bash -c "
 source '$SCRIPT_DIR/env.bat'
-python3 '$SCRIPT_DIR/controller.py'
+python3 '$SCRIPT_DIR/src/controller.py'
 exec bash
 "
