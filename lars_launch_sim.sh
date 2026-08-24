@@ -15,6 +15,9 @@ sleep 10
 echo "=> Starte Controller..."
 python3 src/controller.py &
 
+echo "=> Starte MCL Node (Localisation)..."
+python3 src/localisation/mcl_node.py &
+
 echo "\n========================================================"
 echo "✅ Projekt läuft! Drücke Strg+C, um alles zu beenden."
 echo "========================================================\n"

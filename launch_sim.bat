@@ -19,3 +19,10 @@ source '$SCRIPT_DIR/env.bat'
 python3 '$SCRIPT_DIR/src/controller.py'
 exec bash
 "
+
+# Start MCL node in third tab
+gnome-terminal --tab --title="Localisation (MCL)" -- bash -c "
+source '$SCRIPT_DIR/env.bat'
+python3 '$SCRIPT_DIR/src/localisation/mcl_node.py'
+exec bash
+"
