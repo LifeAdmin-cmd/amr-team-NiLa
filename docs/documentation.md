@@ -28,3 +28,24 @@ To prevent the robot from getting stuck on corners or choosing passages it canno
 <img src="img/flood_fill_demo_inflated.png" width="600"/>
 
 *Figure: The planner correctly identifies that the goal is unreachable because the narrow gaps in the walls (1 cell) are completely closed off by the robot's inflation radius (3 cells) in the Configuration Space.*
+
+---
+
+### 2. Localisation (Monte Carlo Localisation)
+
+To accurately track the robot's position within a known map, a **Particle Filter (Monte Carlo Localisation)** has been implemented from scratch.
+
+#### Pure Python Core (`particle_filter.py`)
+The algorithm's mathematics are cleanly separated from ROS 2 infrastructure:
+1. **Initialization:** 500 particles are generated to represent possible robot poses $(x, y, \theta)$.
+2. **Prediction (Motion Model):** As the robot drives, the odometry changes $(\Delta x, \Delta y, \Delta \theta)$ are applied to every particle. To model real-world slippage, Gaussian noise is injected during this step.
+3. **Update (Sensor Model):** A sub-sampled set of rays from the Lidar scan is projected from each particle's assumed pose into the map. A simple end-point model evaluates if the ray hits an obstacle ($Z_{hit}$) or empty space ($Z_{rand}$). The particle's weight is updated based on how well its simulated scan matches the real scan.
+4. **Resampling:** A low-variance systematic resampling step eliminates low-probability particles and duplicates those that strongly align with the sensor data.
+
+#### ROS 2 Integration (`mcl_node.py`)
+A dedicated ROS 2 node runs alongside the controller:
+- It subscribes to `/scan` for Lidar data and uses the `odom` $\rightarrow$ `base_link` transform for movement tracking.
+- Currently, it tests the particle filter against a hardcoded Configuration Space mock map (mirroring the square obstacle in the Path Controller). 
+- It publishes its best guess as a `PoseStamped` on `/mcl_pose` (for visualization in RViz) and broadcasts the standard `map` $\rightarrow$ `odom` TF transform.
+
+> **Next Step (SLAM):** Once the Environment Exploration and SLAM mapping are completed in Step 3, the hardcoded mock map in `mcl_node.py` will be replaced by a dynamic subscription to the `/map` topic published by the SLAM node.
