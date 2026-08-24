@@ -77,7 +77,7 @@ class Controller(Node):
         start_cell = self._local_to_cell(*self.START_LOCAL)
         goal_cell = self._local_to_cell(*self.GOAL_LOCAL)
 
-        flood_fill = FloodFillPlanner(grid, obstacle_threshold=0.5)
+        flood_fill = FloodFillPlanner(grid, obstacle_threshold=0.5, inflation_radius_cells=3)
         _, waypoint_cells = flood_fill.get_waypoints(start_cell, goal_cell)
 
         if waypoint_cells is None:

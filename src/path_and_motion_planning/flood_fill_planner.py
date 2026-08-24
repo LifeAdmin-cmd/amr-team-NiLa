@@ -21,6 +21,7 @@ from collections import deque
 from typing import List, Optional, Tuple
 
 import numpy as np
+import math
 
 Cell = Tuple[int, int]  # (row, col)
 
@@ -28,10 +29,11 @@ Cell = Tuple[int, int]  # (row, col)
 class FloodFillPlanner:
     """Flood fill global planner over a 2D occupancy grid."""
 
-    def __init__(self, grid: np.ndarray, obstacle_threshold: float = 0.5):
+    def __init__(self, grid: np.ndarray, obstacle_threshold: float = 0.5, inflation_radius_cells: int = 3):
         self.grid = grid
         self.obstacle_threshold = obstacle_threshold
         self.n_rows, self.n_cols = grid.shape
+        self.grid = self._inflate_grid(grid, inflation_radius_cells)
 
     # ------------------------------------------------------------------ #
     def is_free(self, cell: Cell) -> bool:
@@ -180,3 +182,33 @@ class FloodFillPlanner:
             return None, None
         waypoints = self.simplify_path(path)
         return path, waypoints
+    
+
+    # ------------------------------------------------------------------ #
+    def _inflate_grid(self, original_grid: np.ndarray, radius: int) -> np.ndarray:
+        """
+        Inflates obstacles in the occupancy grid by a given radius. This is useful for ensuring that the robot maintains a safe distance from obstacles.
+        """
+        if radius <= 0:
+            return original_grid
+
+        inflated_grid = np.copy(original_grid)
+        
+        # find all current obstacles
+        obstacle_rows, obstacle_cols = np.where(original_grid >= self.obstacle_threshold)
+        
+        for r, c in zip(obstacle_rows, obstacle_cols):
+            # calc search grid to limit the number of cells to check
+            r_min = max(0, r - radius)
+            r_max = min(self.n_rows, r + radius + 1)
+            c_min = max(0, c - radius)
+            c_max = min(self.n_cols, c + radius + 1)
+            
+            # check if cell is in radius
+            for i in range(r_min, r_max):
+                for j in range(c_min, c_max):
+                    # euclidean distance check
+                    if math.hypot(i - r, j - c) <= radius:
+                        inflated_grid[i, j] = 1.0
+                        
+        return inflated_grid

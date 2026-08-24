@@ -25,7 +25,7 @@ from flood_fill_planner import FloodFillPlanner
 
 
 def visualize(grid: np.ndarray, start, goal, save_path: str = "flood_fill_result.png"):
-    planner = FloodFillPlanner(grid, obstacle_threshold=0.5)
+    planner = FloodFillPlanner(grid, obstacle_threshold=0.5, inflation_radius_cells=3)
     path, waypoints = planner.get_waypoints(start, goal)
 
     fig, ax = plt.subplots(figsize=(8, 8))
