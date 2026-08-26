@@ -84,7 +84,7 @@ class MappingNode(Node):
         ]
 
         self.ax.clear()
-        self.ax.imshow(grid, cmap='Greys', vmin=0.0, vmax=1.0, origin='lower', extent=extent)
+        self.ax.imshow(grid, cmap='Greys_r', vmin=0.0, vmax=1.0, origin='lower', extent=extent)
         self.ax.plot(self.robot_x, self.robot_y, 'rs', markersize=8)
         self.ax.set_title('Occupancy Grid (live)')
         self.ax.set_xlim(extent[0], extent[1])
