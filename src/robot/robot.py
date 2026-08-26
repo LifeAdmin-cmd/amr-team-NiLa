@@ -89,8 +89,8 @@ class Robot:
     # ------------------------------------------------------------------ #
     # Frames
     # ------------------------------------------------------------------ #
-    def get_robot_pose_in_odom(self) -> Optional[Tuple[float, float]]:
-        """Current robot (x, y) in the odom frame, or None if TF not ready.
+    def get_robot_pose_in_odom(self) -> Optional[Tuple[float, float, float]]:
+        """Current robot (x, y, theta) in the odom frame, or None if TF not ready.
         Used to capture wherever the robot happens to be as a local origin."""
         try:
             if not self._tf_buffer.can_transform(
@@ -100,7 +100,15 @@ class Robot:
             t = self._tf_buffer.lookup_transform(
                 self.odom_frame, self.base_frame, rclpy.time.Time()
             )
-            return t.transform.translation.x, t.transform.translation.y
+            x = t.transform.translation.x
+            y = t.transform.translation.y
+
+            q = t.transform.rotation
+            siny_cosp = 2.0 * (q.w * q.z + q.x * q.y)
+            cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z)
+            theta = math.atan2(siny_cosp, cosy_cosp)
+
+            return x, y, theta
         except Exception as e:
             self.node.get_logger().warn(f"TF error: {e}")
             return None
