@@ -103,7 +103,10 @@ class Controller(Node):
         Returns True if a new path was planned, False if exploration is done."""
         grid = self.mapper.get_probability_grid()
         flood_fill = FloodFillPlanner(
-            grid, obstacle_threshold=0.5, inflation_radius_cells=self.INFLATION_RADIUS_CELLS
+            grid,
+            obstacle_threshold=0.5,
+            inflation_radius_cells=self.INFLATION_RADIUS_CELLS,
+            inflate_threshold=0.9,  # only inflate around confirmed obstacles, not unknown cells
         )
         dist_from_robot = flood_fill.flood_fill(robot_cell)
 

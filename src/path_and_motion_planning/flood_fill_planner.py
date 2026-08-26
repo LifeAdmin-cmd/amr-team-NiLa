@@ -29,9 +29,20 @@ Cell = Tuple[int, int]  # (row, col)
 class FloodFillPlanner:
     """Flood fill global planner over a 2D occupancy grid."""
 
-    def __init__(self, grid: np.ndarray, obstacle_threshold: float = 0.5, inflation_radius_cells: int = 3):
+    def __init__(
+        self,
+        grid: np.ndarray,
+        obstacle_threshold: float = 0.5,
+        inflation_radius_cells: int = 3,
+        inflate_threshold: float = None,
+    ):
         self.grid = grid
         self.obstacle_threshold = obstacle_threshold
+        # Which cells count as inflation *sources*. Defaults to obstacle_threshold
+        # (old behavior). Pass a higher value (e.g. 0.9) when the grid also
+        # contains "unknown" (0.5) cells, so inflation only grows around
+        # confirmed obstacles, not unexplored space.
+        self.inflate_threshold = obstacle_threshold if inflate_threshold is None else inflate_threshold
         self.n_rows, self.n_cols = grid.shape
         self.grid = self._inflate_grid(grid, inflation_radius_cells)
 
@@ -195,7 +206,7 @@ class FloodFillPlanner:
         inflated_grid = np.copy(original_grid)
         
         # find all current obstacles
-        obstacle_rows, obstacle_cols = np.where(original_grid >= self.obstacle_threshold)
+        obstacle_rows, obstacle_cols = np.where(original_grid >= self.inflate_threshold)
         
         for r, c in zip(obstacle_rows, obstacle_cols):
             # calc search grid to limit the number of cells to check
