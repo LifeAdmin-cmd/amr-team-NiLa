@@ -1,1 +1,5 @@
-# src/localisation/__init__.py
+from .particle_filter import ParticleFilter
+
+__all__ = [
+    "ParticleFilter",
+]

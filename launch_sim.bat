@@ -26,3 +26,11 @@ source '$SCRIPT_DIR/env.bat'
 python3 '$SCRIPT_DIR/src/localisation/mcl_node.py'
 exec bash
 "
+
+# Start Mapping node in fourth tab
+gnome-terminal --tab --title="Mapping" -- bash -c "
+source '$SCRIPT_DIR/env.bat'
+python3 '$SCRIPT_DIR/src/mapping/mapping_node.py'
+exec bash
+"
+
