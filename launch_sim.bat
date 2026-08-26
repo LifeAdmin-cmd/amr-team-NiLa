@@ -33,4 +33,3 @@ source '$SCRIPT_DIR/env.bat'
 python3 '$SCRIPT_DIR/src/mapping/mapping_node.py'
 exec bash
 "
-

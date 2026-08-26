@@ -11,13 +11,11 @@ always "relative to the robot's starting pose", not a fixed odom position.
     Robot                 -> get_robot_pose_in_odom(), get_lidar(), set_velocity()
     FloodFillPlanner       -> local map + start/goal in, waypoint list out
     PotentialFieldPlanner  -> current waypoint + lidar in, (vx, vy, dist, reached) out
-    OccupancyGridMapper    -> pose + lidar in, live occupancy grid out
     Controller             -> captures origin, ties it all together
 """
 
 import math
 
-import matplotlib.pyplot as plt
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -25,7 +23,6 @@ from rclpy.node import Node
 from robot.robot import Robot
 from path_and_motion_planning.potential_field_planner import PotentialFieldPlanner
 from path_and_motion_planning.flood_fill_planner import FloodFillPlanner
-from mapping.occupancy_grid_mapper import OccupancyGridMapper
 
 
 class Controller(Node):
@@ -50,10 +47,6 @@ class Controller(Node):
     MAX_LINEAR = 0.4    # m/s cap
     MAX_ANGULAR = 0.8   # rad/s cap
 
-    # ── Live mapping ──────────────────────────────────────────────────────
-    MAP_SIZE_M = 20.0
-    MAP_RESOLUTION = 0.1
-
     CONTROL_PERIOD = 0.1  # s, 10 Hz control loop
 
     def __init__(self):
@@ -67,36 +60,15 @@ class Controller(Node):
             goal_tolerance=0.3,
             min_obstacle_range=0.15,
         )
-        self.mapper = OccupancyGridMapper(size_m=self.MAP_SIZE_M, resolution=self.MAP_RESOLUTION)
 
         self.origin = None          # (x, y) in odom -- captured on first tick
         self.waypoints = None       # built once origin is known
         self.waypoint_idx = 0
         self.goal_reached = False
 
-        self._setup_map_plot()
-
         self.timer = self.create_timer(self.CONTROL_PERIOD, self.control_loop)
 
         self.get_logger().info('Controller started. Waiting to capture starting pose...')
-
-    # ------------------------------------------------------------------ #
-    def _setup_map_plot(self):
-        plt.ion()
-        self.map_fig, self.map_ax = plt.subplots(figsize=(6, 6))
-        empty = np.full((self.mapper.size_cells, self.mapper.size_cells), 0.5)
-        self.map_img = self.map_ax.imshow(empty, cmap='Greys', vmin=0.0, vmax=1.0, origin='lower')
-        self.map_ax.set_title('Occupancy Grid (live)')
-        self.map_robot_marker, = self.map_ax.plot([], [], 'rs', markersize=8)
-        self.map_fig.canvas.draw()
-        plt.show(block=False)
-
-    def _refresh_map_plot(self, robot_x: float, robot_y: float):
-        self.map_img.set_data(self.mapper.get_probability_grid())
-        row, col = self.mapper._world_to_cell(robot_x, robot_y)
-        self.map_robot_marker.set_data([col], [row])
-        self.map_fig.canvas.draw_idle()
-        self.map_fig.canvas.flush_events()
 
     # ------------------------------------------------------------------ #
     def _build_waypoints(self):
@@ -162,17 +134,6 @@ class Controller(Node):
         if lidar_data is None:
             self.get_logger().warn('Waiting for /scan...', throttle_duration_sec=2.0)
             return
-
-        # Mapping: update with the robot's current pose (not just the captured origin)
-        current_pose = self.robot.get_robot_pose_in_odom()
-        if current_pose is not None:
-            pose_x, pose_y, pose_yaw = current_pose
-            self.mapper.update(
-                pose_x, pose_y, pose_yaw,
-                lidar_data.ranges, lidar_data.angle_min, lidar_data.angle_increment,
-                range_max=lidar_data.range_max or 10.0,
-            )
-            self._refresh_map_plot(pose_x, pose_y)
 
         local_x, local_y = self.waypoints[self.waypoint_idx]
         target_x = self.origin[0] + local_x

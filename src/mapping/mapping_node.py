@@ -71,21 +71,27 @@ class MappingNode(Node):
     def _setup_plot(self):
         plt.ion()
         self.fig, self.ax = plt.subplots(figsize=(6, 6))
-        empty = np.full((self.mapper.size_cells, self.mapper.size_cells), 0.5)
-        self.img = self.ax.imshow(empty, cmap='Greys', vmin=0.0, vmax=1.0, origin='lower')
         self.ax.set_title('Occupancy Grid (live)')
-        self.robot_marker, = self.ax.plot([], [], 'rs', markersize=8)
-        self.fig.canvas.draw()
         plt.show(block=False)
 
     def _refresh_plot(self):
         grid = self.mapper.get_probability_grid()
-        self.img.set_data(grid)
+        extent = [
+            self.mapper.origin_x,
+            self.mapper.origin_x + self.mapper.size_cells * self.mapper.resolution,
+            self.mapper.origin_y,
+            self.mapper.origin_y + self.mapper.size_cells * self.mapper.resolution,
+        ]
 
-        row, col = self.mapper._world_to_cell(self.robot_x, self.robot_y)
-        self.robot_marker.set_data([col], [row])
+        self.ax.clear()
+        self.ax.imshow(grid, cmap='Greys', vmin=0.0, vmax=1.0, origin='lower', extent=extent)
+        self.ax.plot(self.robot_x, self.robot_y, 'rs', markersize=8)
+        self.ax.set_title('Occupancy Grid (live)')
+        self.ax.set_xlim(extent[0], extent[1])
+        self.ax.set_ylim(extent[2], extent[3])
+        self.ax.set_aspect('equal')
 
-        self.fig.canvas.draw_idle()
+        self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
     # ------------------------------------------------------------------ #
