@@ -5,43 +5,50 @@ controller.py
 Orchestration only: everything below is planned in a LOCAL frame where
 (0, 0) is wherever the robot happens to be when the controller starts.
 That origin is captured once (from odom, via TF), then every waypoint is
-shifted by it before being handed to Robot -- so the map/obstacle/goal are
-always "relative to the robot's starting pose", not a fixed odom position.
+shifted by it before being handed to Robot -- so the map/goal are always
+"relative to the robot's starting pose", not a fixed odom position.
+
+Exploration loop: build an occupancy map from lidar as we drive, ask
+FrontierExplorer for the closest unexplored frontier, flood-fill a path to
+it, drive there with the potential field planner, then repeat. Stops once
+no frontier is left (or none are reachable).
+
+Bounded map: anything with x or y outside [BOUND_MIN, BOUND_MAX] (meters,
+centered on the robot's start) is always treated as an obstacle, so
+exploration can't wander off into an unbounded area -- see
+OccupancyGridMapper(bound_min=..., bound_max=...).
 
     Robot                 -> get_robot_pose_in_odom(), get_lidar(), set_velocity()
-    FloodFillPlanner       -> local map + start/goal in, waypoint list out
+    OccupancyGridMapper    -> lidar + pose in, occupancy grid out
+    FrontierExplorer       -> grid + reachability in, next frontier cell out
+    FloodFillPlanner       -> grid + start/goal in, waypoint list out
     PotentialFieldPlanner  -> current waypoint + lidar in, (vx, vy, dist, reached) out
     Controller             -> captures origin, ties it all together
+
+Note: this node does NOT draw the map -- run mapping/mapping_node.py
+alongside it for the live view, so only one process owns the plot.
 """
 
 import math
 
-import numpy as np
 import rclpy
 from rclpy.node import Node
 
 from robot.robot import Robot
 from path_and_motion_planning.potential_field_planner import PotentialFieldPlanner
 from path_and_motion_planning.flood_fill_planner import FloodFillPlanner
+from mapping.occupancy_grid_mapper import OccupancyGridMapper
+from exploration.frontier_explorer import FrontierExplorer
 
 
 class Controller(Node):
 
-    # ── Local grid -> local (robot-relative) frame conversion ────────────
-    GRID_RESOLUTION = 0.1   # meters per cell
-    GRID_ORIGIN_X = -5.0    # local x of grid cell (row=0, col=0)
-    GRID_ORIGIN_Y = -5.0    # local y of grid cell (row=0, col=0)
-    GRID_SIZE = 60          # cells per side -> 6m x 6m, covers local [-5, 1]
-
-    # ── The square obstacle, relative to the robot's start (0, 0) ────────
-    OBSTACLE_X_MIN = -3.0
-    OBSTACLE_X_MAX = -1.0
-    OBSTACLE_Y_MIN = -3.0
-    OBSTACLE_Y_MAX = -1.0
-
-    # ── Start / goal, relative to the robot's start (0, 0) ───────────────
-    START_LOCAL = (0.0, 0.0)     # always the robot's own starting pose
-    GOAL_LOCAL = (-4.0, -4.0)    # straight line to here cuts through the obstacle
+    # ── Map config ────────────────────────────────────────────────────────
+    MAP_RESOLUTION = 0.1    # meters per cell
+    MAX_MAP_SIZE = 20.0     # meters, side length of the allocated grid
+    BOUND_MIN = -10.0       # "Bounded map": x/y below this is always an obstacle
+    BOUND_MAX = 10.0        # x/y above this is always an obstacle
+    INFLATION_RADIUS_CELLS = 3
 
     # ── Motion limits ────────────────────────────────────────────────────
     MAX_LINEAR = 0.4    # m/s cap
@@ -60,59 +67,69 @@ class Controller(Node):
             goal_tolerance=0.3,
             min_obstacle_range=0.15,
         )
+        self.mapper = OccupancyGridMapper(
+            size_m=self.MAX_MAP_SIZE,
+            resolution=self.MAP_RESOLUTION,
+            bound_min=self.BOUND_MIN,
+            bound_max=self.BOUND_MAX,
+        )
+        self.explorer = FrontierExplorer()
 
-        self.origin = None          # (x, y) in odom -- captured on first tick
-        self.waypoints = None       # built once origin is known
+        self.origin = None            # (x, y) in odom -- captured on first tick
+        self.waypoints = None         # current path to the active frontier
         self.waypoint_idx = 0
-        self.goal_reached = False
+        self.exploration_done = False
 
         self.timer = self.create_timer(self.CONTROL_PERIOD, self.control_loop)
 
         self.get_logger().info('Controller started. Waiting to capture starting pose...')
 
     # ------------------------------------------------------------------ #
-    def _build_waypoints(self):
-        """Flood fill the local map once, in the robot-relative frame."""
-        grid = self._generate_square_obstacle_grid()
-        start_cell = self._local_to_cell(*self.START_LOCAL)
-        goal_cell = self._local_to_cell(*self.GOAL_LOCAL)
-
-        flood_fill = FloodFillPlanner(grid, obstacle_threshold=0.5, inflation_radius_cells=3)
-        _, waypoint_cells = flood_fill.get_waypoints(start_cell, goal_cell)
-
-        if waypoint_cells is None:
-            raise RuntimeError('No path around the obstacle from start to goal.')
-
-        return [self._cell_to_local(c) for c in waypoint_cells]
-
-    def _generate_square_obstacle_grid(self) -> np.ndarray:
-        """Free everywhere except one square obstacle block."""
-        grid = np.zeros((self.GRID_SIZE, self.GRID_SIZE))
-
-        r_min, c_min = self._local_to_cell(self.OBSTACLE_X_MIN, self.OBSTACLE_Y_MIN)
-        r_max, c_max = self._local_to_cell(self.OBSTACLE_X_MAX, self.OBSTACLE_Y_MAX)
-        grid[min(r_min, r_max):max(r_min, r_max) + 1,
-             min(c_min, c_max):max(c_min, c_max) + 1] = 1.0
-
-        return grid
-
-    # ------------------------------------------------------------------ #
     def _cell_to_local(self, cell) -> tuple:
         """Grid (row, col) -> (x, y) in the robot-relative local frame."""
         row, col = cell
-        x = self.GRID_ORIGIN_X + col * self.GRID_RESOLUTION
-        y = self.GRID_ORIGIN_Y + row * self.GRID_RESOLUTION
+        x = self.mapper.origin_x + col * self.mapper.resolution
+        y = self.mapper.origin_y + row * self.mapper.resolution
         return x, y
 
     def _local_to_cell(self, x: float, y: float) -> tuple:
         """(x, y) in the robot-relative local frame -> grid (row, col)."""
-        col = int(round((x - self.GRID_ORIGIN_X) / self.GRID_RESOLUTION))
-        row = int(round((y - self.GRID_ORIGIN_Y) / self.GRID_RESOLUTION))
+        row, col = self.mapper._world_to_cell(x, y)
         return row, col
 
     # ------------------------------------------------------------------ #
+    def _plan_next_frontier(self, robot_cell):
+        """Find the closest reachable frontier and flood-fill a path to it.
+        Returns True if a new path was planned, False if exploration is done."""
+        grid = self.mapper.get_probability_grid()
+        flood_fill = FloodFillPlanner(
+            grid, obstacle_threshold=0.5, inflation_radius_cells=self.INFLATION_RADIUS_CELLS
+        )
+        dist_from_robot = flood_fill.flood_fill(robot_cell)
+
+        target_cell = self.explorer.select_target(grid, dist_from_robot)
+        if target_cell is None:
+            return False
+
+        full_path = flood_fill.plan(robot_cell, target_cell)
+        if full_path is None:
+            # Reachability said yes but planning disagrees (e.g. inflation) --
+            # blacklist it like any other unreachable frontier and try again next tick.
+            self.explorer.blacklist.add(target_cell)
+            return True
+
+        waypoint_cells = flood_fill.simplify_path(full_path)
+        self.waypoints = [self._cell_to_local(c) for c in waypoint_cells]
+        self.waypoint_idx = 0
+
+        self.get_logger().info(
+            f'New frontier target at cell {target_cell}, {len(self.waypoints)} waypoints planned.'
+        )
+        return True
+
+    # ------------------------------------------------------------------ #
     def control_loop(self):
-        if self.goal_reached:
+        if self.exploration_done:
             return
 
         # Capture wherever the robot is right now as the local origin,
@@ -124,10 +141,8 @@ class Controller(Node):
                 self.get_logger().warn('Waiting for starting pose (TF)...', throttle_duration_sec=2.0)
                 return
             self.origin = origin
-            self.waypoints = self._build_waypoints()
             self.get_logger().info(
-                f'Starting pose captured at odom ({origin[0]:.2f}, {origin[1]:.2f}) -> local (0, 0). '
-                f'{len(self.waypoints)} waypoints planned.'
+                f'Starting pose captured at odom ({origin[0]:.2f}, {origin[1]:.2f}) -> local (0, 0).'
             )
 
         lidar_data = self.robot.get_lidar()
@@ -135,9 +150,33 @@ class Controller(Node):
             self.get_logger().warn('Waiting for /scan...', throttle_duration_sec=2.0)
             return
 
-        local_x, local_y = self.waypoints[self.waypoint_idx]
-        target_x = self.origin[0] + local_x
-        target_y = self.origin[1] + local_y
+        current_pose = self.robot.get_robot_pose_in_odom()
+        if current_pose is None:
+            self.get_logger().warn('Waiting for TF (odom -> base_link)...', throttle_duration_sec=2.0)
+            return
+
+        pose_x, pose_y, pose_yaw = current_pose
+        local_x = pose_x - self.origin[0]
+        local_y = pose_y - self.origin[1]
+
+        self.mapper.update(
+            local_x, local_y, pose_yaw,
+            lidar_data.ranges, lidar_data.angle_min, lidar_data.angle_increment,
+            range_max=lidar_data.range_max or 10.0,
+        )
+
+        robot_cell = self._local_to_cell(local_x, local_y)
+
+        if not self.waypoints:
+            if not self._plan_next_frontier(robot_cell):
+                self.exploration_done = True
+                self.robot.stop()
+                self.get_logger().info('Exploration complete -- no reachable frontiers left.')
+            return
+
+        wp_x, wp_y = self.waypoints[self.waypoint_idx]
+        target_x = self.origin[0] + wp_x
+        target_y = self.origin[1] + wp_y
 
         goal_bl = self.robot.get_goal_in_base_frame(target_x, target_y)
         if goal_bl is None:
@@ -153,14 +192,8 @@ class Controller(Node):
         if waypoint_reached:
             self.waypoint_idx += 1
             if self.waypoint_idx >= len(self.waypoints):
-                self.goal_reached = True
-                self.robot.stop()
-                self.get_logger().info('Goal reached! All waypoints complete.')
-            else:
-                self.get_logger().info(
-                    f'Waypoint {self.waypoint_idx}/{len(self.waypoints)} reached, '
-                    f'moving to next.'
-                )
+                self.waypoints = None  # reached the frontier -- replan next tick
+                self.get_logger().info('Frontier reached, replanning...')
             return
 
         linear_x, angular_z = self._velocity_to_cmd(vx, vy)

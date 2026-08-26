@@ -31,6 +31,8 @@ class OccupancyGridMapper:
         p_free: float = 0.8,
         l_min: float = -10.0,
         l_max: float = 10.0,
+        bound_min: float = -10.0,
+        bound_max: float = 10.0,
     ):
         """
         :param size_m: side length of the (square) map in meters.
@@ -39,9 +41,14 @@ class OccupancyGridMapper:
         :param p_free: inverse sensor model probability for free cells.
         :param l_min: clamp for accumulated log-odds (avoid overflow/drift).
         :param l_max: clamp for accumulated log-odds.
+        :param bound_min: lower x/y bound (meters) around (0, 0). Cells outside
+            [bound_min, bound_max] always read as occupied, regardless of sensor data.
+        :param bound_max: upper x/y bound (meters) around (0, 0).
         """
         self.resolution = resolution
         self.size_cells = int(size_m / resolution)
+        self.bound_min = bound_min
+        self.bound_max = bound_max
 
         self.l_occ = math.log(p_occ / (1.0 - p_occ))
         self.l_free = math.log(p_free / (1.0 - p_free))
@@ -54,6 +61,15 @@ class OccupancyGridMapper:
         # Map centered on the robot's starting pose
         self.origin_x = -size_m / 2.0
         self.origin_y = -size_m / 2.0
+
+        self._out_of_bounds = self._compute_out_of_bounds_mask()
+
+    def _compute_out_of_bounds_mask(self) -> np.ndarray:
+        """Boolean mask of cells outside [bound_min, bound_max] on either axis."""
+        rows, cols = np.indices((self.size_cells, self.size_cells))
+        xs = self.origin_x + cols * self.resolution
+        ys = self.origin_y + rows * self.resolution
+        return (xs < self.bound_min) | (xs > self.bound_max) | (ys < self.bound_min) | (ys > self.bound_max)
 
     def _world_to_cell(self, x: float, y: float) -> Tuple[int, int]:
         col = int((x - self.origin_x) / self.resolution)
@@ -136,4 +152,7 @@ class OccupancyGridMapper:
 
     def get_probability_grid(self) -> np.ndarray:
         """Log-odds -> probability of occupancy, in [0, 1]."""
-        return 1.0 - 1.0 / (1.0 + np.exp(self.log_odds))
+        prob_free = 1.0 / (1.0 + np.exp(-self.log_odds))
+        grid = 1.0 - prob_free
+        grid[self._out_of_bounds] = 1.0
+        return grid
