@@ -80,6 +80,8 @@ class MappingNode(Node):
         self.ax.set_title('Occupancy Grid (live)')
         plt.show(block=False)
 
+    VIEW_MARGIN_M = 1.0  # extra space shown around the map, so its boundary edge is visible
+
     def _refresh_plot(self):
         grid = self.mapper.get_probability_grid()
         extent = [
@@ -95,8 +97,8 @@ class MappingNode(Node):
         self.ax.plot(self.planned_path_x, self.planned_path_y, '-o', color='orange', linewidth=1.5, markersize=4)
         self.ax.plot(self.robot_x, self.robot_y, 'rs', markersize=8)
         self.ax.set_title('Occupancy Grid (live)')
-        self.ax.set_xlim(extent[0], extent[1])
-        self.ax.set_ylim(extent[2], extent[3])
+        self.ax.set_xlim(extent[0] - self.VIEW_MARGIN_M, extent[1] + self.VIEW_MARGIN_M)
+        self.ax.set_ylim(extent[2] - self.VIEW_MARGIN_M, extent[3] + self.VIEW_MARGIN_M)
         self.ax.set_aspect('equal')
 
         self.fig.canvas.draw()

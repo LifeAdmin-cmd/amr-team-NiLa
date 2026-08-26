@@ -51,6 +51,7 @@ class Controller(Node):
     BOUND_MIN = -10.0       # "Bounded map": x/y below this is always an obstacle
     BOUND_MAX = 10.0        # x/y above this is always an obstacle
     INFLATION_RADIUS_CELLS = 3
+    PATH_REPLAN_EVERY_N_TICKS = 5  # ~2 Hz -- recompute the route to the current target
 
     # ── Motion limits ────────────────────────────────────────────────────
     MAX_LINEAR = 0.4    # m/s cap
@@ -63,11 +64,11 @@ class Controller(Node):
 
         self.robot = Robot(self)
         self.planner = PotentialFieldPlanner(
-            ka=0.4,
-            kr=0.3,
-            rho0=1.5,
-            goal_tolerance=0.3,
-            min_obstacle_range=0.15,
+            ka=0.5,
+            kr=0.2,
+            rho0=1.0,
+            goal_tolerance=0.5,
+            min_obstacle_range=0.3,
         )
         self.mapper = OccupancyGridMapper(
             size_m=self.MAX_MAP_SIZE,
@@ -81,7 +82,9 @@ class Controller(Node):
         self.origin = None            # (x, y) in odom -- captured on first tick
         self.waypoints = None         # current path to the active frontier
         self.waypoint_idx = 0
+        self.current_target_cell = None
         self.exploration_done = False
+        self._replan_tick = 0
 
         self.timer = self.create_timer(self.CONTROL_PERIOD, self.control_loop)
 
@@ -118,17 +121,41 @@ class Controller(Node):
         self.path_pub.publish(msg)
 
     # ------------------------------------------------------------------ #
-    def _plan_next_frontier(self, robot_cell):
-        """Find the closest reachable frontier and flood-fill a path to it.
-        Returns True if a new path was planned or should be retried next tick,
-        False only once exploration is genuinely complete."""
-        grid = self.mapper.get_probability_grid()
-        flood_fill = FloodFillPlanner(
+    def _make_flood_fill(self, grid):
+        return FloodFillPlanner(
             grid,
             obstacle_threshold=0.5,
             inflation_radius_cells=self.INFLATION_RADIUS_CELLS,
             inflate_threshold=0.9,  # only inflate around confirmed obstacles, not unknown cells
         )
+
+    def _replan_to_current_target(self, robot_cell) -> bool:
+        """Recompute the route to the current target against the latest map.
+        Returns False only if the target itself is now completely unreachable
+        (caller should then pick a brand-new exploration target)."""
+        if self.current_target_cell is None:
+            return True
+
+        grid = self.mapper.get_probability_grid()
+        flood_fill = self._make_flood_fill(grid)
+        full_path = flood_fill.plan(robot_cell, self.current_target_cell)
+
+        if full_path is None:
+            return False  # target unreachable -- caller picks a new one
+
+        waypoint_cells = flood_fill.simplify_path(full_path)
+        self.waypoints = [self._cell_to_local(c) for c in waypoint_cells]
+        self.waypoint_idx = 0
+        self._publish_planned_path()
+        return True
+
+    # ------------------------------------------------------------------ #
+    def _plan_next_frontier(self, robot_cell):
+        """Find the closest reachable frontier and flood-fill a path to it.
+        Returns True if a new path was planned or should be retried next tick,
+        False only once exploration is genuinely complete."""
+        grid = self.mapper.get_probability_grid()
+        flood_fill = self._make_flood_fill(grid)
         dist_from_robot = flood_fill.flood_fill(robot_cell)
 
         target_cell = self.explorer.select_target(grid, dist_from_robot)
@@ -148,6 +175,7 @@ class Controller(Node):
         waypoint_cells = flood_fill.simplify_path(full_path)
         self.waypoints = [self._cell_to_local(c) for c in waypoint_cells]
         self.waypoint_idx = 0
+        self.current_target_cell = target_cell
         self._publish_planned_path()
 
         self.get_logger().info(
@@ -195,6 +223,15 @@ class Controller(Node):
 
         robot_cell = self._local_to_cell(local_x, local_y)
 
+        if self.waypoints:
+            self._replan_tick += 1
+            if self._replan_tick % self.PATH_REPLAN_EVERY_N_TICKS == 0:
+                if not self._replan_to_current_target(robot_cell):
+                    self.get_logger().info('Target blocked by newly-mapped obstacle, picking a new one...')
+                    self.explorer.blacklist.add(self.current_target_cell)
+                    self.waypoints = None
+                    self.current_target_cell = None
+
         if not self.waypoints:
             if not self._plan_next_frontier(robot_cell):
                 self.exploration_done = True
@@ -221,6 +258,7 @@ class Controller(Node):
             self.waypoint_idx += 1
             if self.waypoint_idx >= len(self.waypoints):
                 self.waypoints = None  # reached the frontier -- replan next tick
+                self.current_target_cell = None
                 self.get_logger().info('Frontier reached, replanning...')
             return
 
