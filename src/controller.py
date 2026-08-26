@@ -33,6 +33,8 @@ import math
 
 import rclpy
 from rclpy.node import Node
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 
 from robot.robot import Robot
 from path_and_motion_planning.potential_field_planner import PotentialFieldPlanner
@@ -74,6 +76,7 @@ class Controller(Node):
             bound_max=self.BOUND_MAX,
         )
         self.explorer = FrontierExplorer()
+        self.path_pub = self.create_publisher(Path, '/planned_path', 10)
 
         self.origin = None            # (x, y) in odom -- captured on first tick
         self.waypoints = None         # current path to the active frontier
@@ -98,9 +101,27 @@ class Controller(Node):
         return row, col
 
     # ------------------------------------------------------------------ #
+    def _publish_planned_path(self):
+        """Publish the current waypoint list (odom frame) so mapping_node can draw it."""
+        msg = Path()
+        msg.header.stamp = self.get_clock().now().to_msg()
+        msg.header.frame_id = 'odom'
+
+        for wp_x, wp_y in self.waypoints:
+            pose = PoseStamped()
+            pose.header = msg.header
+            pose.pose.position.x = self.origin[0] + wp_x
+            pose.pose.position.y = self.origin[1] + wp_y
+            pose.pose.orientation.w = 1.0
+            msg.poses.append(pose)
+
+        self.path_pub.publish(msg)
+
+    # ------------------------------------------------------------------ #
     def _plan_next_frontier(self, robot_cell):
         """Find the closest reachable frontier and flood-fill a path to it.
-        Returns True if a new path was planned, False if exploration is done."""
+        Returns True if a new path was planned or should be retried next tick,
+        False only once exploration is genuinely complete."""
         grid = self.mapper.get_probability_grid()
         flood_fill = FloodFillPlanner(
             grid,
@@ -112,7 +133,10 @@ class Controller(Node):
 
         target_cell = self.explorer.select_target(grid, dist_from_robot)
         if target_cell is None:
-            return False
+            # Either no frontiers exist at all (done), or the only ones left
+            # are too close to be worth driving to right now (not done --
+            # retry next tick once the map has moved on a bit).
+            return not self.explorer.is_exploration_complete(grid)
 
         full_path = flood_fill.plan(robot_cell, target_cell)
         if full_path is None:
@@ -124,6 +148,7 @@ class Controller(Node):
         waypoint_cells = flood_fill.simplify_path(full_path)
         self.waypoints = [self._cell_to_local(c) for c in waypoint_cells]
         self.waypoint_idx = 0
+        self._publish_planned_path()
 
         self.get_logger().info(
             f'New frontier target at cell {target_cell}, {len(self.waypoints)} waypoints planned.'

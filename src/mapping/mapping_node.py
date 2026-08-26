@@ -14,7 +14,7 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
-from nav_msgs.msg import OccupancyGrid, Odometry
+from nav_msgs.msg import OccupancyGrid, Odometry, Path
 from sensor_msgs.msg import LaserScan
 
 from mapping.occupancy_grid_mapper import OccupancyGridMapper
@@ -44,6 +44,11 @@ class MappingNode(Node):
         self.last_update_pose = None  # (x, y, yaw)
         self.latest_scan = None
 
+        self.path_x = []  # traveled path, for drawing on the map
+        self.path_y = []
+        self.planned_path_x = []  # target path from the controller, for drawing
+        self.planned_path_y = []
+
         sensor_qos = QoSProfile(
             depth=10,
             reliability=ReliabilityPolicy.BEST_EFFORT,
@@ -57,6 +62,7 @@ class MappingNode(Node):
 
         self.scan_sub = self.create_subscription(LaserScan, '/scan', self.scan_callback, sensor_qos)
         self.odom_sub = self.create_subscription(Odometry, '/odom', self.odom_callback, 10)
+        self.path_sub = self.create_subscription(Path, '/planned_path', self.path_callback, 10)
         self.map_pub = self.create_publisher(OccupancyGrid, '/map', map_qos)
 
         # Mapping + publishing loop
@@ -84,7 +90,9 @@ class MappingNode(Node):
         ]
 
         self.ax.clear()
-        self.ax.imshow(grid, cmap='Greys_r', vmin=0.0, vmax=1.0, origin='lower', extent=extent)
+        self.ax.imshow(grid, cmap='Greys', vmin=0.0, vmax=1.0, origin='lower', extent=extent)
+        self.ax.plot(self.path_x, self.path_y, '-', color='deepskyblue', linewidth=1.5)
+        self.ax.plot(self.planned_path_x, self.planned_path_y, '-o', color='orange', linewidth=1.5, markersize=4)
         self.ax.plot(self.robot_x, self.robot_y, 'rs', markersize=8)
         self.ax.set_title('Occupancy Grid (live)')
         self.ax.set_xlim(extent[0], extent[1])
@@ -106,6 +114,10 @@ class MappingNode(Node):
 
     def scan_callback(self, msg: LaserScan):
         self.latest_scan = msg
+
+    def path_callback(self, msg: Path):
+        self.planned_path_x = [pose.pose.position.x for pose in msg.poses]
+        self.planned_path_y = [pose.pose.position.y for pose in msg.poses]
 
     # ------------------------------------------------------------------ #
     def _moved_enough(self) -> bool:
@@ -129,6 +141,8 @@ class MappingNode(Node):
                 range_min=scan.range_min, range_max=scan.range_max,
             )
             self.last_update_pose = (self.robot_x, self.robot_y, self.robot_yaw)
+            self.path_x.append(self.robot_x)
+            self.path_y.append(self.robot_y)
 
         self._publish_map()
         self._refresh_plot()

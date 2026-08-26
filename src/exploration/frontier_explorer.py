@@ -35,14 +35,23 @@ class FrontierExplorer:
     unexplored boundary. Frontiers that turn out to be unreachable are
     blacklisted so they aren't retried -- effectively marked as explored."""
 
-    def __init__(self, free_threshold: float = 0.3, occ_threshold: float = 0.7):
+    def __init__(
+        self,
+        free_threshold: float = 0.3,
+        occ_threshold: float = 0.7,
+        min_frontier_distance_cells: int = 5,
+    ):
         """
         :param free_threshold: grid value below which a cell counts as free.
         :param occ_threshold: grid value above which a cell counts as occupied.
                                Anything in between is unknown.
+        :param min_frontier_distance_cells: skip candidates closer than this
+            (in cells) to the robot -- too close to actually drive to before
+            the potential field planner already reports "reached".
         """
         self.free_threshold = free_threshold
         self.occ_threshold = occ_threshold
+        self.min_frontier_distance_cells = min_frontier_distance_cells
         self.blacklist: Set[Cell] = set()
 
     def _is_unknown(self, value: float) -> bool:
@@ -82,6 +91,8 @@ class FrontierExplorer:
             d = dist_from_robot[cell]
             if d == -1:
                 self.blacklist.add(cell)  # unreachable -- treat as explored
+            elif d < self.min_frontier_distance_cells:
+                continue  # too close to be worth driving to
             else:
                 reachable.append((d, cell))
 
