@@ -29,6 +29,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import numpy as np
 
 Cell = Tuple[int, int]  # (row, col)
+HEADING_OFFSET = (math.pi/2)
 
 
 class FrontierExplorer:
@@ -179,7 +180,9 @@ class FrontierExplorer:
         """
         frontiers = self.find_frontiers(grid)
         frontier_set = set(frontiers)
-
+        #robot heading offset this is importnat for robil4!!!
+        robot_heading += HEADING_OFFSET
+        
         in_cone: List[Tuple[float, Cell]] = []
         out_of_cone: List[Tuple[float, Cell]] = []
 

@@ -1,0 +1,4 @@
+the "video_robot.mp4" is of the clip "navigating right space - with path planning and mapping.webm"
+
+this click showcases the navigation, rotation towards next path point and updating path if it is determined to be unreachable 
+this works a lot better in simulation, due to sensor noise the robot sometimes might replan although the goal is reachable

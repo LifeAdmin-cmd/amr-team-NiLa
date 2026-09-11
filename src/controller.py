@@ -65,8 +65,8 @@ class Controller(Node):
                                       # so passing through one actually requires driving there
 
     # ── Motion limits ────────────────────────────────────────────────────
-    MAX_LINEAR = 1    # m/s cap
-    MAX_ANGULAR = 1   # rad/s cap
+    MAX_LINEAR = 0.1    # m/s cap
+    MAX_ANGULAR = 0.1   # rad/s cap
 
     # ── Rotate-to-face-waypoint ──────────────────────────────────────────
     ROTATE_ANGLE_TOLERANCE = math.radians(5)  # "close enough" to stop pure rotation
@@ -80,7 +80,7 @@ class Controller(Node):
         self.robot = Robot(self)
         self.planner = PotentialFieldPlanner(
             ka=0.3,
-            kr=0.1,
+            kr=0.5,
             rho0=0.5,
             goal_tolerance=0.5,
             min_obstacle_range=0.3,
