@@ -1,0 +1,19 @@
+sensor noise :D
+thats it 
+
+to be more precise if the happen to have a single noise particle directly on our planned path nodes / end node we will have no way to plan a propper path to the target. This actually happens a lot more then you would expect. 
+
+Solving it:
+Added a threshold to how many planning iterrations can fail (if we re scan without the particle on our goal we are able to reach it again)
+
+
+what else:
+
+pottential field planner made robot drive backwards sometimes 
+thats a big no-no if we write around in a real environment (withou having a sensor in the back)
+so the first step of path planning is always -> turn towards next goal
+
+
+wird but good side effect:
+we get the first waypoint before we get lidar data, the robot iwll ahve a goal point really close and pretty much turn around on spot
+-> free mapping before we start exploring :D
