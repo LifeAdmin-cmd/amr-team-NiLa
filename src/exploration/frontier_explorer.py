@@ -31,34 +31,36 @@ Cell = Tuple[int, int]  # (row, col)
 
 
 class FrontierExplorer:
-    """Frontier-based exploration: always head for the closest reachable
-    unexplored boundary. Frontiers that turn out to be unreachable are
-    blacklisted so they aren't retried -- effectively marked as explored."""
-
     def __init__(
         self,
         free_threshold: float = 0.3,
         occ_threshold: float = 0.7,
         min_frontier_distance_cells: int = 5,
+        switch_margin_cells: float = 3.0,
+        unreachable_confirm_count: int = 3,
     ):
         """
-        :param free_threshold: grid value below which a cell counts as free.
-        :param occ_threshold: grid value above which a cell counts as occupied.
-                               Anything in between is unknown.
-        :param min_frontier_distance_cells: skip candidates closer than this
-            (in cells) to the robot -- too close to actually drive to before
-            the potential field planner already reports "reached".
+        :param switch_margin_cells: only abandon the current target for a new
+            one if the new one is at least this many cells closer. Prevents
+            noisy flood-fill distances from causing target flip-flop.
+        :param unreachable_confirm_count: number of consecutive "-1" (unreachable)
+            readings required before a cell is blacklisted. Guards against a
+            single noisy flood-fill pass wrongly killing a valid frontier.
         """
         self.free_threshold = free_threshold
         self.occ_threshold = occ_threshold
         self.min_frontier_distance_cells = min_frontier_distance_cells
+        self.switch_margin_cells = switch_margin_cells
+        self.unreachable_confirm_count = unreachable_confirm_count
+
         self.blacklist: Set[Cell] = set()
+        self._unreachable_strikes: dict[Cell, int] = {}
+        self.current_target: Optional[Cell] = None
 
     def _is_unknown(self, value: float) -> bool:
         return self.free_threshold <= value <= self.occ_threshold
 
     def find_frontiers(self, grid: np.ndarray) -> List[Cell]:
-        """Free cells with at least one unknown neighbor, excluding blacklisted ones."""
         n_rows, n_cols = grid.shape
         neighbors_4 = [(-1, 0), (1, 0), (0, -1), (0, 1)]
         frontiers = []
@@ -77,31 +79,45 @@ class FrontierExplorer:
         return frontiers
 
     def select_target(self, grid: np.ndarray, dist_from_robot: np.ndarray) -> Optional[Cell]:
-        """Closest reachable frontier cell, or None if exploration is complete.
-
-        :param grid: the occupancy probability grid.
-        :param dist_from_robot: flood-fill distance grid rooted at the robot's
-            current cell (e.g. FloodFillPlanner.flood_fill(robot_cell)).
-            -1 means unreachable.
-        """
         frontiers = self.find_frontiers(grid)
+        frontier_set = set(frontiers)
 
         reachable = []
         for cell in frontiers:
             d = dist_from_robot[cell]
             if d == -1:
-                self.blacklist.add(cell)  # unreachable -- treat as explored
-            elif d < self.min_frontier_distance_cells:
-                continue  # too close to be worth driving to
+                strikes = self._unreachable_strikes.get(cell, 0) + 1
+                self._unreachable_strikes[cell] = strikes
+                if strikes >= self.unreachable_confirm_count:
+                    self.blacklist.add(cell)
+                    self._unreachable_strikes.pop(cell, None)
+                continue
             else:
+                # cell reported reachable this pass -- reset its strike count
+                self._unreachable_strikes.pop(cell, None)
+                if d < self.min_frontier_distance_cells:
+                    continue
                 reachable.append((d, cell))
 
         if not reachable:
+            self.current_target = None
             return None
 
         reachable.sort(key=lambda entry: entry[0])
-        return reachable[0][1]
+        best_dist, best_cell = reachable[0]
+
+        # Hysteresis: stick with the current target unless it's no longer a
+        # valid frontier, or a new candidate is meaningfully closer. This is
+        # what stops sensor-noise-driven distance jitter from causing
+        # target flip-flop while the old target is still perfectly reachable.
+        if self.current_target is not None and self.current_target in frontier_set:
+            current_dist = dist_from_robot[self.current_target]
+            if current_dist != -1 and current_dist >= self.min_frontier_distance_cells:
+                if best_dist >= current_dist - self.switch_margin_cells:
+                    return self.current_target
+
+        self.current_target = best_cell
+        return best_cell
 
     def is_exploration_complete(self, grid: np.ndarray) -> bool:
-        """True once no unexplored frontier remains."""
         return len(self.find_frontiers(grid)) == 0

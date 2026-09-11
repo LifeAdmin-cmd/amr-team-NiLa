@@ -15,3 +15,6 @@ source "$ROS2_PATH/install/setup.bash"
 # Add src to PYTHONPATH so python can find the modules
 ENV_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 export PYTHONPATH="$PYTHONPATH:$ENV_DIR/src"
+
+export FASTRTPS_DEFAULT_PROFILES_FILE=~/ros2_network_config.xml
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp

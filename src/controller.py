@@ -54,8 +54,8 @@ class Controller(Node):
     PATH_REPLAN_EVERY_N_TICKS = 5  # ~2 Hz -- recompute the route to the current target
 
     # ── Motion limits ────────────────────────────────────────────────────
-    MAX_LINEAR = 0.4    # m/s cap
-    MAX_ANGULAR = 0.8   # rad/s cap
+    MAX_LINEAR = 0.1    # m/s cap
+    MAX_ANGULAR = 0.1   # rad/s cap
 
     CONTROL_PERIOD = 0.1  # s, 10 Hz control loop
 
@@ -64,9 +64,9 @@ class Controller(Node):
 
         self.robot = Robot(self)
         self.planner = PotentialFieldPlanner(
-            ka=0.5,
-            kr=0.2,
-            rho0=1.0,
+            ka=0.3,
+            kr=0.1,
+            rho0=0.5,
             goal_tolerance=0.5,
             min_obstacle_range=0.3,
         )
