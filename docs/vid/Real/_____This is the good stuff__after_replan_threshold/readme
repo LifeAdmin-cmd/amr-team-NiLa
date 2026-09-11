@@ -2,3 +2,7 @@ the "video_robot.mp4" is of the clip "navigating right space - with path plannin
 
 this click showcases the navigation, rotation towards next path point and updating path if it is determined to be unreachable 
 this works a lot better in simulation, due to sensor noise the robot sometimes might replan although the goal is reachable
+
+due to the confinements of the room only a small run of the robot is showcased as a proof of concept. all controller components can be imrpoved and further optimized for running code on the real robot. Space outside of C69 (easier environment for testing is sadly occpuied (repairing the leak)) so we are limited to this small exmaple run that should show the code working regardless.
+
+we can also see that the mapping tool works although with smaller artifacts.
