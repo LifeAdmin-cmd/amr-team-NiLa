@@ -88,4 +88,17 @@ A dedicated ROS 2 node runs alongside the controller:
 - Currently, it tests the particle filter against a hardcoded Configuration Space mock map (mirroring the square obstacle in the Path Controller). 
 - It publishes its best guess as a `PoseStamped` on `/mcl_pose` (for visualization in RViz) and broadcasts the standard `map` $\rightarrow$ `odom` TF transform.
 
-> **Next Step (SLAM):** Once the Environment Exploration and SLAM mapping are completed in Step 3, the hardcoded mock map in `mcl_node.py` will be replaced by a dynamic subscription to the `/map` topic published by the SLAM node.
+---
+
+### 3. Environment Exploration
+
+To enable the Robile to autonomously discover its surroundings, an active environment exploration strategy has been implemented and integrated with a SLAM (Simultaneous Localization and Mapping) component.
+
+#### Active Mapping Integration
+The exploration strategy operates in tandem with an active mapping node. As the robot navigates the environment, the mapping node continuously processes Lidar scans and odometry data to build and update an occupancy grid map. This dynamic `/map` is fed back into both our global planner and the particle filter, replacing the hardcoded mock maps previously used for testing.
+
+#### Frontier-Based Exploration Strategy
+The core of our exploration logic relies on frontier-based pose selection:
+- **Identifying Fringes:** The algorithm scans the current occupancy grid to find "frontiers" — the boundaries separating known, explored free space from unknown, unexplored regions.
+- **Pose Selection Logic:** When the robot needs a new destination, the exploration node identifies the most optimal frontier cell. It calculates a target pose near this boundary, ensuring it lies within known free space, and orients the robot to face the unknown region.
+- **Transitioning to Unexplored Regions:** This target pose is passed to the global flood-fill planner, which generates a path through the safe Configuration Space to the frontier. Once the robot reaches this fringe, the sensors sweep the unknown area, the mapping node updates the grid, and new frontiers are calculated. This iterative process expands the map until the entire accessible environment is fully explored.
