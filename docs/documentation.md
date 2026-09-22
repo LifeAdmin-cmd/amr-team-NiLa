@@ -1,3 +1,43 @@
+# AMR Final Project: Robile Deployment
+
+## Project Structure & Setup
+
+### Project Overview
+The goal of this project is to deploy path planning, localisation, and SLAM-based environment exploration on the Robile platform. We aim to transition these capabilities from a simulated environment to the physical robot, addressing real-world challenges along the way.
+
+### Prerequisites & Network Setup
+To run this project, ensure you have the following installed and configured:
+- **Dependencies**: ROS 2 installed as per the course material.
+- **Environment Variables**: Configure your ROS 2 environment, particularly `ROS_DOMAIN_ID`, to ensure proper communication between nodes and avoid interference with other teams. Set this in the provided `env.bat` script.
+- **Network Configuration**: The system requires the generation of a FastRTPS XML profile for proper DDS communication over the network, especially when interfacing with the real Robile.
+
+### Execution Instructions
+1. Make the scripts executable (Linux/macOS):
+   ```bash
+   chmod +x env.bat launch_sim.bat robile_connection.bat
+   ```
+2. Adjust paths and environment variables (like `ROS_DOMAIN_ID`) in `env.bat` if necessary.
+
+**Running the Simulation:**
+To launch the Gazebo simulation with the Robile, run:
+```bash
+./launch_sim.bat
+```
+
+**Running on the Physical Robot:**
+To connect to the physical Robile and manage its operations, use the provided menu-driven script for SSH access and teleoperation:
+```bash
+./robile_connection.bat
+```
+
+### Repository Management
+- **Single Branch**: All code and documentation for this project are maintained on a single main branch.
+- **.gitignore**: We utilize a `.gitignore` file to ensure that only necessary files are committed, preventing the upload of large, unnecessary folders (like build artifacts or unneeded data).
+
+---
+
+## Core Task Implementation
+
 ### 1. Path and Motion Planning
 #### Motion planning as done in the assignments -> attraction based
 Potential field planner from the assignments, ported as-is and wrapped into a python class for ease of use.
