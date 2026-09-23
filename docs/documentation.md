@@ -25,10 +25,61 @@ To launch the Gazebo simulation with the Robile, run:
 ```
 
 **Running on the Physical Robot:**
-To connect to the physical Robile and manage its operations, use the provided menu-driven script for SSH access and teleoperation:
+To deploy on the physical Robile platform, connect your machine to the **Robile5G** Wi-Fi network and run the automated connection script:
 ```bash
+# Connect to default robot (Robile 4) and launch all nodes
 ./robile_connection.bat
+
+# Or target a specific robot (e.g., Robile 3)
+./robile_connection.bat 3
 ```
+
+The script automatically executes the entire deployment pipeline without manual menu navigation:
+1. **Network Configuration**: Auto-detects the active Wi-Fi interface (e.g. `wlp1s0`), writes the FastRTPS XML profile whitelist (`~/ros2_network_config.xml`), and updates `~/.bashrc` with required DDS environment variables.
+2. **Domain ID Synchronization**: Sets and exports `ROS_DOMAIN_ID` matching the target robot (`1`-`4`) to isolate DDS traffic.
+3. **Connectivity & Topic Verification**: Pings the physical robot (`192.168.0.10X`), restarts the ROS 2 daemon if needed, and checks whether hardware topics are publishing.
+4. **Local Node Launch**: Launches separate `gnome-terminal` tabs for the Path Controller (`src/controller.py`), MCL Localisation (`src/localisation/mcl_node.py`), and Occupancy Grid Mapping (`src/mapping/mapping_node.py`), each pre-configured with the correct `ROS_DOMAIN_ID`.
+
+#### Starting the Control Task on the Physical Robot (`robile_bringup`)
+
+The physical Robile hardware requires an onboard driver and control stack to translate high-level `/cmd_vel` velocity commands into low-level wheel torques, and to stream sensor measurements:
+- **Kelo Tulip Drive Driver** (`kelo_tulip`): Interfaces with the Kelo smart wheel modules, computing kinematics and controlling the drive motors.
+- **Lidar Scanner Driver**: Publishes `/scan` (using `sick_scan` for Sick LMS1XX on Robile 3, or `urg_node2` for Hokuyo on Robile 4).
+- **Robot State Publisher & Transforms**: Publishes `/robot_description`, `/tf`, `/odom`, and static transforms (`base_link` $\rightarrow$ `base_laser`, `base_link` $\rightarrow$ `base_footprint`).
+
+##### 1. Automated Start (Remote Bringup via SSH)
+You can start the onboard control task directly from your host using:
+```bash
+./robile_connection.bat 4 --remote-bringup
+```
+This connects to the robot via SSH and launches the bringup stack inside a detached `tmux` session named `bringup`.
+
+##### 2. Manual Start & Monitoring (Best Practice)
+Running the control task inside `tmux` is essential: if an SSH terminal drops due to Wi-Fi jitter, processes running directly in that terminal will terminate, stopping the robot mid-operation. A `tmux` session persists independently.
+
+1. **SSH into the Robot**:
+   ```bash
+   ssh -x studentkelo@192.168.0.104    # Password: area5142
+   # Or using the configured bashrc alias:
+   robile4
+   ```
+2. **Open a Persistent Tmux Session**:
+   ```bash
+   tmux new -s bringup
+   ```
+3. **Launch the Control Task**:
+   ```bash
+   source /opt/ros/humble/setup.bash
+   source ~/ros2_ws/install/setup.bash
+   export ROS_DOMAIN_ID=4
+   export ROBOT_NAME=robile4
+   ros2 launch robile_bringup robot.launch.py
+   ```
+4. **Detach from Session**:
+   Press `Ctrl + b`, then release and press `d`. You can now safely close the SSH terminal; the control task remains running.
+5. **Re-attach or Terminate**:
+   - To inspect running driver output: `tmux attach -t bringup`
+   - To stop the robot control task: `tmux kill-session -t bringup`
 
 ### Repository Management
 - **Single Branch**: All code and documentation for this project are maintained on a single main branch.

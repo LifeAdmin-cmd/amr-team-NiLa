@@ -2,14 +2,17 @@
 
 1. Install ros2 and dependencies as described in course material
 2. Make scripts Executable
-```
-chmod +x env.bat
-chmod +x launch_sim.bat
+```bash
+chmod +x env.bat launch_sim.bat launch_controller_robile.bat robile_connection.bat
 ```
 3. Adjust paths in `env.bat` if needed
-4. start simulation
-```
+4. Start simulation (Gazebo + Nodes):
+```bash
 ./launch_sim.bat
+```
+5. Or run on the Physical Robot (Automated Pipeline):
+```bash
+./robile_connection.bat [ROBOT_ID]   # e.g. ./robile_connection.bat 4
 ```
 
 # Documentation

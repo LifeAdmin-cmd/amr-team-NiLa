@@ -8,9 +8,15 @@ ROS2_PATH="$HOME/ros2_ws"
 # uncomment if not needed.
 export PATH="/usr/bin:$PATH"
 
-# ===== Environment setup =====
-source "$HUMBLE_PATH/setup.bash"
-source "$ROS2_PATH/install/setup.bash"
+if [ -f "$HUMBLE_PATH/setup.bash" ]; then
+    source "$HUMBLE_PATH/setup.bash"
+elif [ -f "/opt/ros/iron/setup.bash" ]; then
+    source "/opt/ros/iron/setup.bash"
+fi
+
+if [ -f "$ROS2_PATH/install/setup.bash" ]; then
+    source "$ROS2_PATH/install/setup.bash"
+fi
 
 # Add src to PYTHONPATH so python can find the modules
 ENV_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
