@@ -158,19 +158,37 @@ The core of our exploration logic relies on frontier-based pose selection:
 
 ## Challenges & Visual Documentation
 
-### Troubleshooting & Sim2Real Gap
-Transitioning from the Gazebo simulation to the physical Robile hardware presented several challenges:
-- **Sensor Noise & Discrepancies:** Lidar data on the physical robot was noisier than initially simulated. However, because we already injected Gaussian noise in our simulation tests, the particle filter transferred reasonably well.
-- **Dynamic Replanning:** To account for previously undetected walls or dynamic obstacles moving out of the way, the path to the goal is continuously replanned at set intervals (rather than just replanning the final end goal, which only changes if it becomes unreachable).
-- **Mapping Drift & Robot Speed:** The control loop optimization limits how fast the robot can drive before significant drift occurs, causing mapping artifacts. The robot's speed in simulation feels much slower than reality. To mitigate this, we reduced the robot's speed on the physical hardware so that the controller and mapping loops could keep up, resulting in a much more accurate map with less drift.
+### Troubleshooting, Sim2Real Gap & Comparison
+Transitioning the core algorithms from the pristine Gazebo simulation to the physical Robile hardware highlighted several key discrepancies, commonly known as the sim2real gap. Comparing our simulation runs with the real-world tests reveals the following:
+
+- **Sensor Noise & Map Fidelity:** In the simulation (`exploration.webm`, `mapping demo.webm`), the simulated Lidar produces clean, sharp boundaries, resulting in a highly accurate and crisp occupancy grid. On the physical robot, Lidar data is significantly noisier (picking up table legs, uneven surfaces, etc.). While injecting Gaussian noise in simulation helped prepare the particle filter, the real-world map inherently exhibits more artifacts and fuzzier edges compared to the simulation baseline.
+- **Dynamic Replanning Triggers:** The simulation video (`path_recalculate_stuck.webm`) demonstrates our replanning logic acting as a robust fallback; when the robot is genuinely stuck in a tight corner, it hits a failure threshold and intelligently selects a new frontier. However, in the real world (`video_robot.mp4`), this replanning is triggered much more frequently. Sensor noise often creates "phantom" obstacles that temporarily block the calculated path, causing the robot to halt and replan even when the physical path is technically clear.
+- **Mapping Drift & Control Loop Speed:** In simulation, the compute resources easily handle the control and mapping loops, allowing for steady, reliable movement. On the physical hardware, we discovered that driving the robot too fast caused the control loop to lag behind the physical movement, leading to severe mapping drift and artifacts. To mitigate this, we had to deliberately reduce the physical robot's speed so the processing could keep pace, resulting in a much more accurate map.
 
 ### Visual Evidence
-As documented above, we have validated our implementations visually:
+As documented above, we have validated our implementations visually during the development phase:
 - [Flood-fill with C-Space inflation demonstration](img/flood_fill_demo_inflated.png)
 - [Square path validation (GIF)](img/square_path_validation.gif)
 
-### Video Demonstration
-You can view our final project video demonstrating path planning, localisation, and environment exploration running smoothly on the real robot in the lab here: 
+### Video Demonstration: Simulation Baseline
+Before deploying to the physical robot, the system was thoroughly validated in the Gazebo simulator. These videos demonstrate the intended behavior in a controlled environment.
+
+#### 1. Autonomous Exploration & Mapping (Simulation)
+<video width="320" height="240" controls>
+  <source src="./vid/Sim/exploration.webm" type="video/webm">
+</video>
+
+This video shows the robot autonomously navigating a Gazebo maze. It highlights the clean construction of the occupancy grid and the successful execution of the frontier exploration logic, moving smoothly from one map boundary to the next.
+
+#### 2. Robustness and Fallback Replanning (Simulation)
+<video width="320" height="240" controls>
+  <source src="./vid/Sim/path_recalculate_stuck.webm" type="video/webm">
+</video>
+
+This recording of the system terminal and live map visualizes the fallback logic. When the robot navigates into a constrained area and fails to reach its target, the controller logs the failed replan attempts. Once a threshold is reached (e.g., 10 failed attempts), it successfully discards the unreachable target and selects a new frontier, preventing the system from freezing.
+
+### Video Demonstration: Real-World Deployment
+You can view our final project videos demonstrating path planning, localisation, and environment exploration running on the real robot in the lab here: 
 **[Link to Final Project Video]()** *(Insert actual URL here)*
 
 #### 1. Real-World Navigation & Dynamic Replanning
@@ -178,11 +196,7 @@ You can view our final project video demonstrating path planning, localisation, 
   <source src="./vid/Real/_____This is the good stuff__after_replan_threshold/video_robot.mp4" type="video/mp4">
 </video>
 
-This video showcases the physical Robile hardware navigating a real-world environment. 
-**Key aspects demonstrated:**
-* **Navigation and Path Execution:** The robot successfully follows its planned trajectory, demonstrating the integration of the global path planner and the local potential field planner.
-* **Dynamic Replanning:** The video highlights the system's ability to handle sensor noise and dynamic environments. While moving towards the next waypoint, if the path is determined to be unreachable—perhaps due to a newly detected obstacle or a false positive from sensor noise—the robot halts, rotates, and recalculates a new path to the goal. 
-* **Sim2Real Discrepancies:** This behavior explicitly illustrates the sim2real gap mentioned in the challenges section. In the Gazebo simulation, the environment is pristine, but in reality, lidar noise occasionally causes the robot to replan even when the original goal was technically still reachable. 
+This video showcases the physical hardware navigating room C69. It highlights the system handling physical sensor noise. When a path is deemed unreachable (often due to noise), the robot halts, rotates, and recalculates a new path, demonstrating the real-world application of the replanning logic seen in the simulation.
 
 #### 2. Full System Integration (Path Planning & Mapping)
 <video width="320" height="240" controls>
@@ -190,26 +204,17 @@ This video showcases the physical Robile hardware navigating a real-world enviro
 </video>
 
 *(Note: The previous `video_robot.mp4` is a highlighted clip taken from this longer run.)*
-
-This video shows a longer, continuous run of the robot navigating within a confined space (room C69). 
-**Key aspects demonstrated:**
-* **Integrated System:** It serves as a proof of concept that all core components—the controller, path planner, and mapping tool—are functioning together on the physical hardware. 
-* **Mapping:** The active mapping process is visible, building a representation of the environment as the robot moves. You can observe minor mapping artifacts, which ties back to the challenges discussed regarding control loop speeds and drift.
-* **Environmental Constraints:** The run is relatively short due to space limitations in the testing area (the ideal testing space outside was occupied for leak repairs), but it effectively validates the underlying logic.
+This shows a continuous run of the robot navigating within a confined space, proving that the controller, path planner, and active mapping process function together on the physical hardware despite minor drift artifacts.
 
 #### 3. Real-Time Occupancy Grid Mapping
 <video width="320" height="240" controls>
   <source src="./vid/Real/_____This is the good stuff__after_replan_threshold/creating smi complete room map of c69.webm" type="video/webm">
 </video>
 
-This video provides a screen recording of the system's graphical interface during a mapping run. 
-**Key aspects demonstrated:**
-* **Occupancy Grid Mapping:** The video clearly shows the real-time construction of a 2D occupancy grid map. You can see the map expanding as the robot explores new areas, with walls and obstacles being actively plotted. 
-* **System Diagnostics:** The terminal output running alongside the visual map provides a look at the system's internal processes. It shows continuous logging from the controller node, including the constant recalculation of bearings to waypoints and instances where the robot triggers a replanning event ("Replan to..."). 
-* **Exploration Logic:** This video is excellent evidence for the "Environment Exploration" objective, visualizing how the robot interprets its surroundings to eventually define the map fringes for further exploration.
+This provides a screen recording of the system's graphical interface during the physical run. You can see the 2D occupancy grid expanding in real-time, visualizing how the robot interprets its physical surroundings and defining map fringes for exploration.
 
 ### Team Collaboration
-Since it was hard to manage a project like this with multiple people at once as the implementation was building upon each other we decided to spilt the tasks up and work on them after another sepereately. Like this we split up the work to this constellation:
+Since it was hard to manage a project like this with multiple people at once as the implementation was building upon each other we decided to split the tasks up and work on them after another separately. Like this we split up the work to this constellation:
 
 * Niels - Path finding and environment exploration
 * Lars - Localization and Documentation
