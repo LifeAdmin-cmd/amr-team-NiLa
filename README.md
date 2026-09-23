@@ -1,122 +1,110 @@
-# Setup
+# Autonomous Mobile Robotics (AMR) Final Project — Team NiLa
 
-1. Install ros2 and dependencies as described in course material
-2. Make scripts Executable
+Deployment of an autonomous navigation, localisation, mapping, and exploration stack on the **Robile** mobile robot platform (both in Gazebo simulation and on physical hardware).
+
+Developed by Team NiLa (**Ni**els & **La**rs).
+
+---
+
+## Project Overview
+
+This project implements an end-to-end robotics software stack enabling the Robile to autonomously navigate, map, and explore unknown environments:
+
+- **Global & Local Path Planning**: A global Flood-Fill planner (with Configuration Space obstacle inflation and line-of-sight waypoint shortcutting) combined with an attractive/repulsive Potential Field Planner for local obstacle avoidance and trajectory tracking.
+- **Monte Carlo Localisation (MCL)**: A custom particle filter tracking the robot pose within a map using motion prediction (odometry with Gaussian noise model) and lidar scan observation updates (ray-cast sensor model).
+- **Occupancy Grid Mapping**: Real-time 2D occupancy grid generation from lidar scan hits and misses using Bresenham ray-casting and log-odds updates.
+- **Frontier-Based Autonomous Exploration**: Automated detection of frontiers (boundaries between explored free space and unexplored areas) to iteratively select navigation targets until the environment is fully mapped.
+- **Physical Hardware Deployment (Sim2Real)**: Automated deployment pipeline, DDS network/FastRTPS isolation, dynamic path replanning, and speed calibration to address real-world sensor noise and drift.
+
+---
+
+## Detailed Documentation
+
+For in-depth explanations, mathematical foundations, implementation details, Sim2Real insights, and video demonstrations, please see:
+
+📖 **[Full Project Documentation](docs/documentation.md)**
+
+The documentation covers:
+- **System Architecture & Prerequisites**: ROS 2 Humble setup, DDS / FastRTPS network profiles, and environment variables.
+- **Physical Robot Deployment & Bringup**: SSH/tmux bringup of low-level Kelo tulip drives, lidar drivers (`sick_scan` / `urg_node2`), and TF transforms.
+- **Core Algorithms**: In-depth breakdown of Path Planning (Flood Fill + Potential Fields + C-Space inflation), MCL Particle Filtering, and Frontier Exploration.
+- **Sim2Real Challenges & Tuning**: Handling lidar noise, dynamic obstacle replanning, and odometry drift mitigation.
+- **Video Demonstrations**: Recorded runs on the physical Robile robot in the lab showing dynamic replanning, continuous mapping, and exploration.
+- **Team Contributions**: Individual task breakdown and collaboration details.
+
+---
+
+## Repository & File Structure
+
+```
+amr-team-NiLa/
+├── README.md                      # Project summary, structure, and quickstart (this file)
+├── env.bat                        # Environment configuration (ROS paths, PYTHONPATH, FastRTPS)
+├── launch_sim.bat                 # Launches Gazebo simulation with the Robile robot and world
+├── launch_controller_robile.bat   # Launches controller, MCL, and mapping nodes in separate terminal tabs
+├── robile_connection.bat          # Automated deployment script for physical Robile (DDS, bringup, node launch)
+├── lars_launch_sim.sh             # Simulation helper script
+│
+├── docs/                          # Comprehensive project documentation and media
+│   ├── documentation.md           # Main project report & complete technical documentation
+│   ├── sim_real_gap.md            # Notes on Sim2Real transfer and hardware tuning
+│   ├── img/                       # Documentation images, C-Space plots, and validation animations
+│   └── vid/                       # Video recordings of physical robot tests and interface screencasts
+│
+└── src/                           # Python source code for ROS 2 nodes and robotics algorithms
+    ├── controller.py              # Central coordination node integrating planning, mapping, and driving
+    ├── exploration/
+    │   └── frontier_explorer.py   # Frontier detection and exploration goal selection
+    ├── localisation/
+    │   ├── particle_filter.py     # Pure-Python Monte Carlo Localisation (MCL) particle filter
+    │   └── mcl_node.py            # ROS 2 node interfacing the particle filter with /scan and TF
+    ├── mapping/
+    │   ├── occupancy_grid_mapper.py # 2D Occupancy grid ray-casting and map representation
+    │   └── mapping_node.py        # ROS 2 node publishing /map and processing odometry & scans
+    ├── path_and_motion_planning/
+    │   ├── flood_fill_planner.py  # Global BFS flood-fill planner with C-Space inflation & shortcutting
+    │   ├── potential_field_planner.py # Attractive/repulsive potential field local controller
+    │   └── validate_flood_fill.py # Offline unit test and validation script for flood-fill planner
+    └── robot/
+        └── robot.py               # Robot state abstraction, kinematics, and movement interfaces
+```
+
+---
+
+## Quick Start
+
+### 1. Setup & Permissions
+Make all launch and utility scripts executable:
 ```bash
 chmod +x env.bat launch_sim.bat launch_controller_robile.bat robile_connection.bat
 ```
-3. Adjust paths in `env.bat` if needed
-4. Start simulation (Gazebo + Nodes):
+*(Verify or adjust ROS paths in `env.bat` if your ROS 2 workspace is located elsewhere).*
+
+### 2. Running in Simulation (Gazebo)
+To start the Gazebo simulation environment along with the Robile robot:
 ```bash
 ./launch_sim.bat
 ```
-5. Or run on the Physical Robot (Automated Pipeline):
+
+### 3. Running on the Physical Robot
+Connect to the **Robile5G** Wi-Fi network and execute the automated connection pipeline:
 ```bash
-./robile_connection.bat [ROBOT_ID]   # e.g. ./robile_connection.bat 4
+# Connect to default robot (Robile 4) and launch all nodes
+./robile_connection.bat
+
+# Or connect to a specific robot ID (e.g., Robile 3)
+./robile_connection.bat 3
+
+# Optionally trigger onboard bringup remotely via SSH
+./robile_connection.bat 4 --remote-bringup
 ```
 
-# Documentation
-See [docs/documentation.md](docs/documentation.md) for more details.
+Refer to the [Documentation](docs/documentation.md#starting-the-control-task-on-the-physical-robot-robile_bringup) for manual bringup instructions using `tmux`.
 
-# AMR FINAL PROJECT
-
-
-## Important Information
-
-| Item | Details |
-|------|---------|
-| Assignment Release | 1 July 2026 |
-| Due Date | **28 September 2026, 23:59 CET** |
-| Repository Visibility | Public |
-| Team Size | 3–4 students |
-| Submission | Prepare a report with the format explained in class and Submit the GitHub repository URL on LEA |
-
-
-# Getting Started
-
-## Step 1
-
-Click **Use this template** (green button at the top of this page).
-
-## Step 2
-
-Create a new repository using the following naming convention:
-
-```
-amr-team-<team_name>
-```
-
-Replace '<team_name>' with your desired team name.
-
-## Step 3
-
-Set the repository visibility to **Public** and create the repository.
-
-## Step 4
-
-Invite your team members as collaborators to the repository.
-
-```
-Settings
-    ↓
-Collaborators
-    ↓
-Add people
-```
-
-## Step 5
-
-Clone your repository
-
-example:
-
-```bash
-git clone https://github.com/amr-team-<team_name>.git
-```
-
-## Finally
-
-Work collaboratively by splitting the tasks among team members and individually push your code to the repository.
-
-## Important Note
-
-- Team members work is evaluated based on your commit history, if  we do not see any commits from a team member then we cannot consider their contribution. 
-
-- You can use issue boards and other tools to create issues and pull requests to manage your work and better showcase collaboration.
-
-- Make sure you record almost every session because you need a working video to add into the report. Make sure to take screenshots, screenrecords etc to document your work in an effective manner.
-
-- The robots in the lab are prone to issues so finish everything on simulation as fast as you can and start testing as soon as you can, do not wait until the last moment.
-
-- Make sure to use only one branch to track all of your codes and also do not upload entire folders on to Github, use a gitignore and keep only required files on there.
-
-- Write a nice Readme file on how to use the codes and also explain your approach for the tasks and also any challenges you faced, Feel free to modify this file.
-
-- Ensure when leaving the lab you charge the robots for next team that is coming or if you are the last team unplug the robot, switch it off and then leave.
-
-- Feel free to post any issues you faced on LEA, always refer to the documentation when in confusion and retrace your steps.
 ---
 
-# AMR Project
+## Authors
 
-## Project Objectives
-
-The objective of this project is that you deploy some of the functionalities that were discussed during the course on a real robot platform. In particular, we want to have functionalities for path and motion planning, localisation, and environment exploration on the robot.
-
-We will particularly use the Robile platform during the project; you are already familiar with this robot from the simulation you have been using throughout the semester as well as from the few practical lab sessions that we have had.
-
-## Task Description
-
-The project consists of three parts that are building on each other: (i) path and motion planning, (ii) localisation, and (iii) environment exploration.
-
-### 1. Path and Motion Planning
-
-You have already implemented a *potential field planner* in one of your assignments. In this first part of the project, you need to port your implementation to the real robot and ensure that it is working as well as it was in the simulated environment so that you can navigate towards global goals while avoiding obstacles. Then, integrate your potential field planner with a global path planner, namely first use a path planner (e.g. A*) to find a rough global trajectory of waypoints that the robot can follow to reach a goal and then use the potential field planner to navigate between the waypoints. This will make your potential field planner applicable to large environments, where it can navigate given an environment map.
-
-### 2. Localisation
-
-In one of the course lectures, we discussed Monte Carlo localisation as a practical solution to the robot localisation problem in an existing map. In this second part of the project, your objective is to implement your very own particle filter that you then integrate on the Robile. You should implement the simple version of the filter that we discussed in the lecture; however, if you have time and interest, you are free to additionally explore extensions / improvements to the algorithm, for example in the form of the adaptive Monte Carlo approach that we mentioned in the lecture.
-
-### 3. Environment Exploration
-
-The final objective of the project is to incorporate an environment exploration functionality to the robot. This will have to be combined with a SLAM component, namely you will need your exploration component to select poses to explore and a SLAM component that will take care of actually creating a map. The exploration algorithm should ideally select poses at the map fringe (i.e. poses that are at the boundary between the explored and unexplored region), but you are free to explore different pose selection strategies in your implementation.
+**Team NiLa**:
+- **Niels** — Path and motion planning, environment exploration
+- **Lars** — Particle filter localisation, system integration, documentation
