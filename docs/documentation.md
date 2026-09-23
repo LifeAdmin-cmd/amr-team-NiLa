@@ -165,11 +165,6 @@ Transitioning the core algorithms from the pristine Gazebo simulation to the phy
 - **Dynamic Replanning Triggers:** The simulation video (`path_recalculate_stuck.webm`) demonstrates our replanning logic acting as a robust fallback; when the robot is genuinely stuck in a tight corner, it hits a failure threshold and intelligently selects a new frontier. However, in the real world (`video_robot.mp4`), this replanning is triggered much more frequently. Sensor noise often creates "phantom" obstacles that temporarily block the calculated path, causing the robot to halt and replan even when the physical path is technically clear.
 - **Mapping Drift & Control Loop Speed:** In simulation, the compute resources easily handle the control and mapping loops, allowing for steady, reliable movement. On the physical hardware, we discovered that driving the robot too fast caused the control loop to lag behind the physical movement, leading to severe mapping drift and artifacts. To mitigate this, we had to deliberately reduce the physical robot's speed so the processing could keep pace, resulting in a much more accurate map.
 
-### Visual Evidence
-As documented above, we have validated our implementations visually during the development phase:
-- [Flood-fill with C-Space inflation demonstration](img/flood_fill_demo_inflated.png)
-- [Square path validation (GIF)](img/square_path_validation.gif)
-
 ### Video Demonstration: Simulation Baseline
 Before deploying to the physical robot, the system was thoroughly validated in the Gazebo simulator. These videos demonstrate the intended behavior in a controlled environment.
 
