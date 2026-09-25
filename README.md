@@ -141,13 +141,14 @@ Transitioning from Gazebo simulation to the physical Robile hardware highlighted
 - **Mapping Drift & Control Loop Speed**: Driving the physical robot too fast caused the control loop to lag behind the physical movement, leading to severe mapping drift. We mitigated this by reducing the physical robot's speed. (As additionally documented in the original notes, this slower speed ensures the controller/mapping loop can keep up, reducing drift and artifacts).
 
 ### Video Demonstration
-[![Watch the simulation](https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/assets/vid/Directors_Cut/preview.gif?raw=true)](https://youtu.be/Cx1pNA0cUJQ)
+[![Watch the simulation](./assets/vid/Directors_Cut/preview.gif?raw=true)](https://youtu.be/Cx1pNA0cUJQ)
 *▶️ Click the preview above to watch the full video on YouTube.*
 
 **About this video:**
-This final "Director's Cut" video showcases the complete capabilities of our Autonomous Mobile Robot (AMR) system, highlighting its robust fallback replanning logic where the robot halts, rotates, and recalculates a new path when it encounters sensor noise.
+This final video showcases the complete capabilities of our Autonomous Mobile Robot (AMR) system, bridging the gap between simulated testing and physical hardware. The video demonstrates the robot performing autonomous frontier exploration, dynamic path planning, and real-time occupancy grid mapping. You will see the system gracefully handle both a controlled Gazebo simulation and a real-world deployment in room C69, specifically highlighting its robust fallback replanning logic where the robot halts, rotates, and recalculates a new path when it encounters sensor noise or unreachable, constrained areas.
 
----
+**Other Demonstration Videos:**
+If you would like to view the individual, unedited clips of our system in action—including the raw simulation footage of exploration, the continuous real-world hardware navigation runs, and the real-time screen recordings of the occupancy grid generation—they can all be found within the project repository under the `docs/vid/Sim/` and `docs/vid/Real/` directories.
 
 ## Authors
 
