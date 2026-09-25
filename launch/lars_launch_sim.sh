@@ -3,8 +3,11 @@
 # Fange Strg+C ab und beende alle Hintergrundprozesse sauber
 trap 'echo "\nBeende Prozesse..."; kill 0; exit' INT TERM
 
+SCRIPT_DIR="$(dirname "$0")"
+cd "$SCRIPT_DIR/.." || exit
+
 echo "=> Lade Umgebung..."
-source env.bat
+source config/env.bat
 
 echo "=> Starte Gazebo Simulation im Hintergrund..."
 ros2 launch robile_gazebo gazebo_4_wheel.launch.py &

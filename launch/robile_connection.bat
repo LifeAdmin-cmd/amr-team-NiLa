@@ -23,7 +23,7 @@
 set -o pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-ENV_SCRIPT="$SCRIPT_DIR/env.bat"
+ENV_SCRIPT="$SCRIPT_DIR/../config/env.bat"
 LAUNCH_CONTROLLER_SCRIPT="$SCRIPT_DIR/launch_controller_robile.bat"
 
 # Source the existing ROS2 workspace environment

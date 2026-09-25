@@ -18,19 +18,11 @@ This project implements an end-to-end robotics software stack enabling the Robil
 
 ---
 
-## Detailed Documentation
-
-For in-depth explanations, mathematical foundations, implementation details, Sim2Real insights, and video demonstrations, please see:
-
-📖 **[Full Project Documentation](docs/documentation.md)**
-
-The documentation covers:
-- **System Architecture & Prerequisites**: ROS 2 Humble setup, DDS / FastRTPS network profiles, and environment variables.
-- **Physical Robot Deployment & Bringup**: SSH/tmux bringup of low-level Kelo tulip drives, lidar drivers (`sick_scan` / `urg_node2`), and TF transforms.
-- **Core Algorithms**: In-depth breakdown of Path Planning (Flood Fill + Potential Fields + C-Space inflation), MCL Particle Filtering, and Frontier Exploration.
-- **Sim2Real Challenges & Tuning**: Handling lidar noise, dynamic obstacle replanning, and odometry drift mitigation.
-- **Video Demonstrations**: Recorded runs on the physical Robile robot in the lab showing dynamic replanning, continuous mapping, and exploration.
-- **Team Contributions**: Individual task breakdown and collaboration details.
+## Prerequisites & Network Setup
+To run this project, ensure you have the following installed and configured:
+- **Dependencies**: ROS 2 installed as per the course material.
+- **Environment Variables**: Configure your ROS 2 environment, particularly `ROS_DOMAIN_ID`, to ensure proper communication between nodes and avoid interference with other teams. Set this in the provided `config/env.bat` script.
+- **Network Configuration**: The system requires the generation of a FastRTPS XML profile for proper DDS communication over the network, especially when interfacing with the real Robile.
 
 ---
 
@@ -38,35 +30,25 @@ The documentation covers:
 
 ```
 amr-team-NiLa/
-├── README.md                      # Project summary, structure, and quickstart (this file)
-├── env.bat                        # Environment configuration (ROS paths, PYTHONPATH, FastRTPS)
-├── launch_sim.bat                 # Launches Gazebo simulation with the Robile robot and world
-├── launch_controller_robile.bat   # Launches controller, MCL, and mapping nodes in separate terminal tabs
-├── robile_connection.bat          # Automated deployment script for physical Robile (DDS, bringup, node launch)
-├── lars_launch_sim.sh             # Simulation helper script
-│
-├── docs/                          # Comprehensive project documentation and media
-│   ├── documentation.md           # Main project report & complete technical documentation
-│   ├── sim_real_gap.md            # Notes on Sim2Real transfer and hardware tuning
-│   ├── img/                       # Documentation images, C-Space plots, and validation animations
-│   └── vid/                       # Video recordings of physical robot tests and interface screencasts
-│
+├── README.md                      # Project summary, structure, and documentation
+├── launch/                        # Launch scripts for simulation and hardware deployment
+│   ├── launch_sim.bat
+│   ├── launch_controller_robile.bat
+│   ├── robile_connection.bat
+│   └── lars_launch_sim.sh
+├── config/                        # Configuration files (e.g. env.bat)
+│   └── env.bat
+├── maps/                          # Map files (if any)
+├── assets/                        # Documentation images, C-Space plots, and videos
+│   ├── img/
+│   └── vid/
 └── src/                           # Python source code for ROS 2 nodes and robotics algorithms
-    ├── controller.py              # Central coordination node integrating planning, mapping, and driving
+    ├── controller.py              # Central coordination node
     ├── exploration/
-    │   └── frontier_explorer.py   # Frontier detection and exploration goal selection
     ├── localisation/
-    │   ├── particle_filter.py     # Pure-Python Monte Carlo Localisation (MCL) particle filter
-    │   └── mcl_node.py            # ROS 2 node interfacing the particle filter with /scan and TF
     ├── mapping/
-    │   ├── occupancy_grid_mapper.py # 2D Occupancy grid ray-casting and map representation
-    │   └── mapping_node.py        # ROS 2 node publishing /map and processing odometry & scans
     ├── path_and_motion_planning/
-    │   ├── flood_fill_planner.py  # Global BFS flood-fill planner with C-Space inflation & shortcutting
-    │   ├── potential_field_planner.py # Attractive/repulsive potential field local controller
-    │   └── validate_flood_fill.py # Offline unit test and validation script for flood-fill planner
     └── robot/
-        └── robot.py               # Robot state abstraction, kinematics, and movement interfaces
 ```
 
 ---
@@ -76,22 +58,22 @@ amr-team-NiLa/
 ### 1. Setup & Permissions
 Make all launch and utility scripts executable:
 ```bash
-chmod +x env.bat launch_sim.bat launch_controller_robile.bat robile_connection.bat
+chmod +x config/env.bat launch/launch_sim.bat launch/launch_controller_robile.bat launch/robile_connection.bat
 ```
-*(Verify or adjust ROS paths in `env.bat` if your ROS 2 workspace is located elsewhere).*
+*(Verify or adjust ROS paths in `config/env.bat` if your ROS 2 workspace is located elsewhere).*
 
 ### 2. Running in Simulation (Gazebo)
->The Current robot settings are for running is real world (speed, heading adjustment etc.) the simulation will run but may need to be adjusted for a good experience e.g. increase robot speed
+>The current robot settings are for running in the real world (speed, heading adjustment etc.). The simulation will run but may need to be adjusted for a good experience e.g. increase robot speed.
 
 To start the Gazebo simulation environment along with the Robile robot:
 ```bash
-./launch_sim.bat
+./launch/launch_sim.bat
 ```
 
 ### 3. Running on the Physical Robot
-Start the robot controller bringup on Robile (prerequisit) only done once per session:
+Start the robot controller bringup on Robile (prerequisite, only done once per session):
 ```bash
-# use ssh by hand, keep seesion alive while robot is in use
+# use ssh by hand, keep session alive while robot is in use
 ssh -x studentkelo@192.168.0.104
 ros2 launch robile_bringup robot.launch.py
 ```
@@ -99,11 +81,71 @@ ros2 launch robile_bringup robot.launch.py
 Connect to the **Robile5G** Wi-Fi network and execute the automated connection pipeline:
 ```bash
 # Connect to default robot (Robile 4) and launch all nodes
-./robile_connection.bat
+./launch/robile_connection.bat
 
 # Or connect to a specific robot ID (e.g., Robile 3)
-./robile_connection.bat 3
+./launch/robile_connection.bat 3
 ```
+
+The script automatically executes the entire deployment pipeline:
+1. **Network Configuration**: Auto-detects the active Wi-Fi interface, writes the FastRTPS XML profile whitelist, and updates `~/.bashrc` with required DDS environment variables.
+2. **Domain ID Synchronization**: Sets and exports `ROS_DOMAIN_ID` matching the target robot (`1`-`4`) to isolate DDS traffic.
+3. **Connectivity & Topic Verification**: Pings the physical robot and checks whether hardware topics are publishing.
+4. **Local Node Launch**: Launches separate `gnome-terminal` tabs for the Path Controller, MCL Localisation, and Occupancy Grid Mapping.
+
+---
+
+## Core Task Implementation
+
+### 1. Path and Motion Planning
+#### Motion planning as done in the assignments -> attraction based
+Potential field planner from the assignments (`src/path_and_motion_planning/potential_field_planner.py`: `PotentialFieldPlanner`), ported as-is and wrapped into a python class for ease of use.
+#### Flood fill with line of sight
+Global planner on top (`src/path_and_motion_planning/flood_fill_planner.py`: `FloodFillPlanner`), for large maps where a single potential field goal gets stuck:
+1. **Flood fill**: BFS from the goal gives every free cell a distance-to-goal value.
+2. **Greedy descent**: from the start, always step to the neighbor closer to the goal -> full grid path.
+3. **Waypoint reduction**: If full path is `p0 -> p1 -> p2 -> p3 -> p4 -> ...`. If `p0` can see `p4` in a straight line (no occupied cells), skip `p1`-`p3` and go straight `p0 -> p4`. Repeat from there. Diagonal cuts are blocked if either corner cell is occupied - that's a pinch point robot may not fits through, so the path takes the L-shape detour instead.
+These waypoints feed one at a time into the potential field planner.
+
+<img src="assets/img/flood_fill_demo.png" width="600"/>
+
+#### First path and motion planning validation
+Quick end-to-end validation before continuing: the planned path/waypoints (left) next to the actual robot driving them in Gazebo (right). 
+<img src="assets/img/square_path_validation.gif" width="600"/>
+
+#### Obstacle Inflation (Configuration Space / C-Space)
+To prevent the robot from getting stuck on corners or choosing passages it cannot physically fit through, **obstacle inflation** has been integrated into the global planner.
+* **How it works:** The map is pre-processed before the flood-fill algorithm is executed. Every grid cell marked as an obstacle is artificially "inflated" by a defined radius.
+* **Configuration:** The safety margin can be configured during the initialization of the `FloodFillPlanner` using the `inflation_radius_cells` parameter. 
+
+<img src="assets/img/flood_fill_demo_inflated.png" width="600"/>
+
+### 2. Localisation (Monte Carlo Localisation)
+To accurately track the robot's position within a known map, a **Particle Filter (Monte Carlo Localisation)** has been implemented from scratch.
+- **Pure Python Core (`src/localisation/particle_filter.py`)**: Handles Initialization, Prediction (with Gaussian noise), Update (ray-cast sensor model), and Resampling.
+- **ROS 2 Integration (`src/localisation/mcl_node.py`)**: Runs alongside the controller, subscribes to `/scan`, uses TF for tracking, and publishes `/mcl_pose`.
+
+### 3. Environment Exploration
+To enable the Robile to autonomously discover its surroundings, an active environment exploration strategy has been implemented and integrated with a SLAM component.
+- **Active Mapping Integration**: The exploration strategy operates in parallel with an active mapping node (`src/mapping/mapping_node.py`).
+- **Frontier-Based Exploration Strategy**: The algorithm scans the current occupancy grid to find "frontiers" and computes an optimal target pose near the boundary (`src/exploration/frontier_explorer.py`). 
+
+---
+
+## Challenges & Visual Documentation
+
+### Troubleshooting, Sim2Real Gap & Comparison
+Transitioning from Gazebo simulation to the physical Robile hardware highlighted several discrepancies:
+- **Sensor Noise & Map Fidelity**: Real-world Lidar data is significantly noisier, producing artifacts.
+- **Dynamic Replanning Triggers**: Replanning is triggered much more frequently in the real world due to sensor noise creating "phantom" obstacles.
+- **Mapping Drift & Control Loop Speed**: Driving the physical robot too fast caused the control loop to lag behind the physical movement, leading to severe mapping drift. We mitigated this by reducing the physical robot's speed. (As additionally documented in the original notes, this slower speed ensures the controller/mapping loop can keep up, reducing drift and artifacts).
+
+### Video Demonstration
+[![Watch the simulation](https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/assets/vid/Directors_Cut/preview.gif?raw=true)](https://youtu.be/Cx1pNA0cUJQ)
+*▶️ Click the preview above to watch the full video on YouTube.*
+
+**About this video:**
+This final "Director's Cut" video showcases the complete capabilities of our Autonomous Mobile Robot (AMR) system, highlighting its robust fallback replanning logic where the robot halts, rotates, and recalculates a new path when it encounters sensor noise.
 
 ---
 
