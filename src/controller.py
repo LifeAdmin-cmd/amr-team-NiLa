@@ -65,14 +65,14 @@ class Controller(Node):
                                       # so passing through one actually requires driving there
 
     # ── Motion limits ────────────────────────────────────────────────────
-    MAX_LINEAR = 0.1    # m/s cap
-    MAX_ANGULAR = 0.1   # rad/s cap
+    MAX_LINEAR = 1.0    # m/s cap
+    MAX_ANGULAR = 1.0 # rad/s cap
 
     # ── Rotate-to-face-waypoint ──────────────────────────────────────────
     ROTATE_ANGLE_TOLERANCE = math.radians(5)  # "close enough" to stop pure rotation
     K_ANGULAR_ROTATE = 1.0                     # gain used only while rotating in place
 
-    CONTROL_PERIOD = 0.1  # s, 10 Hz control loop
+    CONTROL_PERIOD = 0.025  # s, 10 Hz control loop
 
     def __init__(self):
         super().__init__('controller')
