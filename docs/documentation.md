@@ -161,60 +161,20 @@ Transitioning the core algorithms from the pristine Gazebo simulation to the phy
 - **Dynamic Replanning Triggers:** The simulation video (`path_recalculate_stuck.webm`) demonstrates our replanning logic acting as a robust fallback; when the robot is genuinely stuck in a tight corner, it hits a failure threshold and intelligently selects a new frontier. However, in the real world (`video_robot.mp4`), this replanning is triggered much more frequently. Sensor noise often creates "phantom" obstacles that temporarily block the calculated path, causing the robot to halt and replan even when the physical path is technically clear.
 - **Mapping Drift & Control Loop Speed:** In simulation, the compute resources easily handle the control and mapping loops, allowing for steady, reliable movement. On the physical hardware, we discovered that driving the robot too fast caused the control loop to lag behind the physical movement, leading to severe mapping drift and artifacts. To mitigate this, we had to deliberately reduce the physical robot's speed so the processing could keep pace, resulting in a much more accurate map.
 
-### Video Demonstration: Simulation Baseline
-Before deploying to the physical robot, the system was thoroughly validated in the Gazebo simulator. These videos demonstrate the intended behavior in a controlled environment.
+### Video Demonstration
 
-#### 1. Autonomous Exploration & Mapping (Simulation)
-<video width="320" height="240" controls>
-  <source src="./vid/Sim/exploration.webm" type="video/webm">
-</video>
+[![Watch the simulation](https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/docs/vid/Directors_Cut/preview.gif?raw=true)](https://youtu.be/Cx1pNA0cUJQ)
+*▶️ Click the preview above to watch the full video on YouTube.*
 
-https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/docs/vid/Sim/exploration.webm
+**About this video:**
+This final "Director's Cut" video showcases the complete capabilities of our Autonomous Mobile Robot (AMR) system, bridging the gap between simulated testing and physical hardware. The video demonstrates the robot performing autonomous frontier exploration, dynamic path planning, and real-time occupancy grid mapping. You will see the system gracefully handle both a controlled Gazebo simulation and a real-world deployment in room C69, specifically highlighting its robust fallback replanning logic where the robot halts, rotates, and recalculates a new path when it encounters sensor noise or unreachable, constrained areas.
 
-This video shows the robot autonomously navigating a Gazebo maze. It highlights the clean construction of the occupancy grid and the successful execution of the frontier exploration logic, moving smoothly from one map boundary to the next.
-
-#### 2. Robustness and Fallback Replanning (Simulation)
-<video width="320" height="240" controls>
-  <source src="./vid/Sim/path_recalculate_stuck.webm" type="video/webm">
-</video>
-
-https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/docs/vid/Sim/path_recalculate_stuck.webm
-
-This recording of the system terminal and live map visualizes the fallback logic. When the robot navigates into a constrained area and fails to reach its target, the controller logs the failed replan attempts. Once a threshold is reached (e.g., 10 failed attempts), it successfully discards the unreachable target and selects a new frontier, preventing the system from freezing.
-
-### Video Demonstration: Real-World Deployment
-You can view our final project videos demonstrating path planning, localisation, and environment exploration running on the real robot in the following videos.
-
-#### 1. Real-World Navigation & Dynamic Replanning
-<video width="320" height="240" controls>
-  <source src="./vid/Real/_____This is the good stuff__after_replan_threshold/video_robot.mp4" type="video/mp4">
-</video>
-
-https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/docs/vid/Real/_____This%20is%20the%20good%20stuff__after_replan_threshold/video_robot.mp4
-
-This video showcases the physical hardware navigating room C69. It highlights the system handling physical sensor noise. When a path is deemed unreachable (often due to noise), the robot halts, rotates, and recalculates a new path, demonstrating the real-world application of the replanning logic seen in the simulation.
-
-#### 2. Full System Integration (Path Planning & Mapping)
-<video width="320" height="240" controls>
-  <source src="./vid/Real/_____This is the good stuff__after_replan_threshold/navigating right space - with path planning and mapping.webm" type="video/webm">
-</video>
-
-https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/docs/vid/Real/_____This%20is%20the%20good%20stuff__after_replan_threshold/navigating%20right%20space%20-%20with%20path%20planning%20and%20mapping.webm
-
-*(Note: The previous `video_robot.mp4` is a highlighted clip taken from this longer run.)*
-This shows a continuous run of the robot navigating within a confined space, proving that the controller, path planner, and active mapping process function together on the physical hardware despite minor drift artifacts.
-
-#### 3. Real-Time Occupancy Grid Mapping
-<video width="320" height="240" controls>
-  <source src="./vid/Real/_____This is the good stuff__after_replan_threshold/creating smi complete room map of c69.webm" type="video/webm">
-</video>
-
-https://github.com/LifeAdmin-cmd/amr-team-NiLa/blob/main/docs/vid/Real/_____This%20is%20the%20good%20stuff__after_replan_threshold/creating%20smi%20complete%20room%20map%20of%20c69.webm
-
-This provides a screen recording of the system's graphical interface during the physical run. You can see the 2D occupancy grid expanding in real-time, visualizing how the robot interprets its physical surroundings and defining map fringes for exploration.
+**Other Demonstration Videos:**
+If you would like to view the individual, unedited clips of our system in action—including the raw simulation footage of exploration, the continuous real-world hardware navigation runs, and the real-time screen recordings of the occupancy grid generation—they can all be found within the project repository under the `docs/vid/Sim/` and `docs/vid/Real/` directories.
 
 ### Team Collaboration
 Since it was hard to manage a project like this with multiple people at once as the implementation was building upon each other we decided to split the tasks up and work on them after another separately. Like this we split up the work to this constellation:
 
 * Nils - Path and motion planning, mapping, environment exploration, basic connection bring up
 * Lars - Particle filter localisation, system integration, documentation, clean connection workflow
+
