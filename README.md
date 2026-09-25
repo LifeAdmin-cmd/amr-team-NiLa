@@ -81,12 +81,21 @@ chmod +x env.bat launch_sim.bat launch_controller_robile.bat robile_connection.b
 *(Verify or adjust ROS paths in `env.bat` if your ROS 2 workspace is located elsewhere).*
 
 ### 2. Running in Simulation (Gazebo)
+>The Current robot settings are for running is real world (speed, heading adjustment etc.) the simulation will run but may need to be adjusted for a good experience e.g. increase robot speed
+
 To start the Gazebo simulation environment along with the Robile robot:
 ```bash
 ./launch_sim.bat
 ```
 
 ### 3. Running on the Physical Robot
+Start the robot controller bringup on Robile (prerequisit) only done once per session:
+```bash
+# use ssh by hand, keep seesion alive while robot is in use
+ssh -x studentkelo@192.168.0.104
+ros2 launch robile_bringup robot.launch.py
+```
+
 Connect to the **Robile5G** Wi-Fi network and execute the automated connection pipeline:
 ```bash
 # Connect to default robot (Robile 4) and launch all nodes
@@ -94,12 +103,7 @@ Connect to the **Robile5G** Wi-Fi network and execute the automated connection p
 
 # Or connect to a specific robot ID (e.g., Robile 3)
 ./robile_connection.bat 3
-
-# Optionally trigger onboard bringup remotely via SSH
-./robile_connection.bat 4 --remote-bringup
 ```
-
-Refer to the [Documentation](docs/documentation.md#starting-the-control-task-on-the-physical-robot-robile_bringup) for manual bringup instructions using `tmux`.
 
 ---
 
