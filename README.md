@@ -55,6 +55,9 @@ amr-team-NiLa/
 
 ## Quick Start
 
+### 0. Step up Robile (Ony for real robot)
+Follow the setup steps for ros2, sim, robot config xml, on amr project page wiki. //**course wiki**
+
 ### 1. Setup & Permissions
 Make all launch and utility scripts executable:
 ```bash
