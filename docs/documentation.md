@@ -183,8 +183,7 @@ This video shows the robot autonomously navigating a Gazebo maze. It highlights 
 This recording of the system terminal and live map visualizes the fallback logic. When the robot navigates into a constrained area and fails to reach its target, the controller logs the failed replan attempts. Once a threshold is reached (e.g., 10 failed attempts), it successfully discards the unreachable target and selects a new frontier, preventing the system from freezing.
 
 ### Video Demonstration: Real-World Deployment
-You can view our final project videos demonstrating path planning, localisation, and environment exploration running on the real robot in the lab here: 
-**[Link to Final Project Video]()** *(Insert actual URL here)*
+You can view our final project videos demonstrating path planning, localisation, and environment exploration running on the real robot in the following videos.
 
 #### 1. Real-World Navigation & Dynamic Replanning
 <video width="320" height="240" controls>
