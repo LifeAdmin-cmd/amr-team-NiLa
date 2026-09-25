@@ -63,21 +63,17 @@ Running the control task inside `tmux` is essential: if an SSH terminal drops du
    # Or using the configured bashrc alias:
    robile4
    ```
-2. **Open a Persistent Tmux Session**:
+2. **Open a Persistent Tmux Session (Tmux specific - optional)**:
    ```bash
    tmux new -s bringup
    ```
 3. **Launch the Control Task**:
    ```bash
-   source /opt/ros/humble/setup.bash
-   source ~/ros2_ws/install/setup.bash
-   export ROS_DOMAIN_ID=4
-   export ROBOT_NAME=robile4
    ros2 launch robile_bringup robot.launch.py
    ```
-4. **Detach from Session**:
+4. **Detach from Session (Tmux specific)**:
    Press `Ctrl + b`, then release and press `d`. You can now safely close the SSH terminal; the control task remains running.
-5. **Re-attach or Terminate**:
+5. **Re-attach or Terminate (Tmux specific)**:
    - To inspect running driver output: `tmux attach -t bringup`
    - To stop the robot control task: `tmux kill-session -t bringup`
 
@@ -220,5 +216,5 @@ This provides a screen recording of the system's graphical interface during the 
 ### Team Collaboration
 Since it was hard to manage a project like this with multiple people at once as the implementation was building upon each other we decided to split the tasks up and work on them after another separately. Like this we split up the work to this constellation:
 
-* Niels - Path finding and environment exploration
-* Lars - Localization and Documentation
+* Nils - Path and motion planning, mapping, environment exploration, basic connection bring up
+* Lars - Particle filter localisation, system integration, documentation, clean connection workflow

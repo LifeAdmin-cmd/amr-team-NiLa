@@ -2,7 +2,7 @@
 
 Deployment of an autonomous navigation, localisation, mapping, and exploration stack on the **Robile** mobile robot platform (both in Gazebo simulation and on physical hardware).
 
-Developed by Team NiLa (**Ni**els & **La**rs).
+Developed by Team NiLa (**Ni**ls & **La**rs).
 
 ---
 
@@ -106,5 +106,5 @@ Refer to the [Documentation](docs/documentation.md#starting-the-control-task-on-
 ## Authors
 
 **Team NiLa**:
-- **Niels** — Path and motion planning, environment exploration
-- **Lars** — Particle filter localisation, system integration, documentation
+* **Nils** - Path and motion planning, mapping, environment exploration, basic connection bring up
+* **Lars** - Particle filter localisation, system integration, documentation, clean connection workflow
